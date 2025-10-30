@@ -1,0 +1,116 @@
+# Miscellaneous
+*.class
+*.log
+*.pyc
+*.swp
+.DS_Store
+.atom/
+.build/
+.buildlog/
+.history
+.svn/
+.swiftpm/
+migrate_working_dir/
+
+# IntelliJ related
+*.iml
+*.ipr
+*.iws
+.idea/
+
+# VSCode
+.vscode/
+*.code-workspace
+
+# Flutter/Dart/Pub related
+**/doc/api/
+**/ios/Flutter/.last_build_id
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.pub-cache/
+.pub/
+/build/
+.packages
+.metadata
+pubspec.lock
+
+# Generated files
+*.g.dart
+*.freezed.dart
+*.config.dart
+*.gen.dart
+*.mocks.dart
+
+# Web related
+/web/*.js
+/web/*.js.map
+/web/*.info.json
+
+# Symbolication related
+app.*.symbols
+
+# Obfuscation related
+app.*.map.json
+
+# Android related
+/android/app/debug
+/android/app/profile
+/android/app/release
+/android/gradlew
+/android/gradlew.bat
+/android/local.properties
+/android/.gradle/
+/android/captures/
+/android/key.properties
+*.jks
+*.keystore
+
+# iOS/XCode related
+/ios/Pods/
+/ios/.symlinks/
+/ios/Flutter/Flutter.framework
+/ios/Flutter/Flutter.podspec
+/ios/Flutter/Generated.xcconfig
+/ios/Flutter/app.flx
+/ios/Flutter/app.zip
+/ios/Flutter/flutter_assets/
+/ios/Runner.xcworkspace/
+/ios/Runner/GeneratedPluginRegistrant.*
+*.mode1v3
+*.mode2v3
+*.moved-aside
+*.pbxuser
+*.perspectivev3
+*.xcuserstate
+*.xcworkspace
+xcuserdata/
+DerivedData/
+
+# macOS
+/macos/Flutter/ephemeral/
+/macos/Pods/
+
+# Environment variables & Secrets
+.env
+.env.*
+!.env.example
+*.env
+secrets.json
+credentials.json
+service-account.json
+google-services.json
+GoogleService-Info.plist
+firebase_options.dart
+
+# Supabase
+.supabase/
+
+# Coverage
+coverage/
+*.lcov
+test/.test_coverage.dart
+
+# Exceptions to above rules (files we DO want to commit)
+!**/ios/Runner/GoogleService-Info.plist.example
+!**/android/app/google-services.json.example
