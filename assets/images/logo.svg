@@ -1,0 +1,81 @@
+<svg width="200" height="200" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background Circle with Gradient -->
+  <defs>
+    <linearGradient id="bgGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#6366F1;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#8B5CF6;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="boxGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#FFFFFF;stop-opacity:0.95" />
+      <stop offset="100%" style="stop-color:#F3F4F6;stop-opacity:0.95" />
+    </linearGradient>
+    <filter id="shadow">
+      <feDropShadow dx="0" dy="4" stdDeviation="6" flood-opacity="0.2"/>
+    </filter>
+  </defs>
+
+  <!-- Main Background Circle -->
+  <circle cx="100" cy="100" r="95" fill="url(#bgGradient)" filter="url(#shadow)"/>
+
+  <!-- Inner Circle Background -->
+  <circle cx="100" cy="100" r="75" fill="#FFFFFF" opacity="0.1"/>
+
+  <!-- Package/Box Icon -->
+  <g transform="translate(100, 100)">
+    <!-- Box Base -->
+    <path d="M -35,-20 L 0,-35 L 35,-20 L 35,20 L 0,35 L -35,20 Z"
+          fill="url(#boxGradient)"
+          stroke="#6366F1"
+          stroke-width="2.5"
+          stroke-linejoin="round"/>
+
+    <!-- Box Top Flap Left -->
+    <path d="M -35,-20 L 0,-35 L 0,0 L -35,15 Z"
+          fill="#FFFFFF"
+          opacity="0.7"
+          stroke="#6366F1"
+          stroke-width="2.5"
+          stroke-linejoin="round"/>
+
+    <!-- Box Top Flap Right -->
+    <path d="M 35,-20 L 0,-35 L 0,0 L 35,15 Z"
+          fill="#E0E7FF"
+          opacity="0.8"
+          stroke="#6366F1"
+          stroke-width="2.5"
+          stroke-linejoin="round"/>
+
+    <!-- Center Line -->
+    <line x1="0" y1="-35" x2="0" y2="35"
+          stroke="#6366F1"
+          stroke-width="2.5"
+          stroke-linecap="round"/>
+
+    <!-- Checkmark/Tick -->
+    <g transform="translate(0, 10)">
+      <path d="M -12,-2 L -5,5 L 12,-12"
+            fill="none"
+            stroke="#10B981"
+            stroke-width="3.5"
+            stroke-linecap="round"
+            stroke-linejoin="round"/>
+    </g>
+  </g>
+
+  <!-- Accent Dots -->
+  <circle cx="40" cy="60" r="4" fill="#FFFFFF" opacity="0.4"/>
+  <circle cx="160" cy="140" r="4" fill="#FFFFFF" opacity="0.4"/>
+  <circle cx="50" cy="150" r="3" fill="#FFFFFF" opacity="0.3"/>
+  <circle cx="150" cy="50" r="3" fill="#FFFFFF" opacity="0.3"/>
+
+  <!-- L Letter at Bottom (Lucio) -->
+  <text x="100" y="175"
+        font-family="Arial, sans-serif"
+        font-size="24"
+        font-weight="bold"
+        fill="#FFFFFF"
+        text-anchor="middle"
+        letter-spacing="3">
+    L S
+  </text>
+</svg>

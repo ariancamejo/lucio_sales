@@ -1,0 +1,11 @@
+# Spider configuration file
+# For more information: https://pub.dev/packages/spider
+
+# Generate files in this path
+export_path: lib/resources/
+
+# Groups of assets
+groups:
+  - class_name: AppImages
+    path: assets/images
+    types: [ .svg, .png, .jpg, .jpeg, .webp, .gif ]
