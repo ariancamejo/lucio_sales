@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../../core/network/network_info.dart';
 import '../../../domain/repositories/measurement_unit_repository.dart';
 import '../../../domain/repositories/output_type_repository.dart';
@@ -18,7 +19,10 @@ class SyncBloc extends Bloc<SyncEvent, SyncState> {
   final ProductEntryRepository productEntryRepository;
   final UserHistoryRepository userHistoryRepository;
   final NetworkInfo networkInfo;
+  final SharedPreferences sharedPreferences;
   Timer? _syncTimer;
+
+  static const String _lastSyncKey = 'last_sync_timestamp';
 
   SyncBloc({
     required this.measurementUnitRepository,
@@ -28,6 +32,7 @@ class SyncBloc extends Bloc<SyncEvent, SyncState> {
     required this.productEntryRepository,
     required this.userHistoryRepository,
     required this.networkInfo,
+    required this.sharedPreferences,
   }) : super(SyncInitial()) {
     on<StartSync>(_onStartSync);
     on<AutoSync>(_onAutoSync);
@@ -74,6 +79,8 @@ class SyncBloc extends Bloc<SyncEvent, SyncState> {
       final failures = results.where((result) => result.isLeft()).toList();
 
       if (failures.isEmpty) {
+        // Save last sync timestamp
+        await _saveLastSyncTimestamp();
         emit(const SyncSuccess('All data synchronized successfully'));
       } else {
         emit(const SyncFailure('Some data failed to synchronize'));
@@ -81,6 +88,17 @@ class SyncBloc extends Bloc<SyncEvent, SyncState> {
     } catch (e) {
       emit(SyncFailure('Sync failed: ${e.toString()}'));
     }
+  }
+
+  Future<void> _saveLastSyncTimestamp() async {
+    final timestamp = DateTime.now().millisecondsSinceEpoch;
+    await sharedPreferences.setInt(_lastSyncKey, timestamp);
+  }
+
+  DateTime? getLastSyncTime() {
+    final timestamp = sharedPreferences.getInt(_lastSyncKey);
+    if (timestamp == null) return null;
+    return DateTime.fromMillisecondsSinceEpoch(timestamp);
   }
 
   @override

@@ -16,6 +16,9 @@ import '../../presentation/screens/output/output_form_screen.dart';
 import '../../presentation/screens/reports/sales_reports_screen.dart';
 import '../../presentation/screens/reports/ipv_report_screen.dart';
 import '../../presentation/screens/audit/audit_history_screen.dart';
+import '../../presentation/screens/settings/settings_screen.dart';
+import '../../presentation/screens/legal/privacy_policy_screen.dart';
+import '../../presentation/screens/legal/terms_of_service_screen.dart';
 import '../di/injection_container.dart';
 import '../services/auth_service.dart';
 
@@ -137,6 +140,9 @@ class AppRouter {
                       break;
                     case 8:
                       context.go('/audit-history');
+                      break;
+                    case 9:
+                      context.go('/settings');
                       break;
                   }
                 },
@@ -310,6 +316,28 @@ class AppRouter {
               child: const AuditHistoryScreen(),
             ),
           ),
+
+          // Settings route
+          GoRoute(
+            path: '/settings',
+            name: 'settings',
+            pageBuilder: (context, state) => NoTransitionPage(
+              key: state.pageKey,
+              child: const SettingsScreen(),
+            ),
+          ),
+
+          // Legal routes
+          GoRoute(
+            path: '/privacy-policy',
+            name: 'privacy-policy',
+            builder: (context, state) => const PrivacyPolicyScreen(),
+          ),
+          GoRoute(
+            path: '/terms-of-service',
+            name: 'terms-of-service',
+            builder: (context, state) => const TermsOfServiceScreen(),
+          ),
         ],
       ),
     ],
@@ -382,6 +410,7 @@ class _HomeScreenShellState extends State<HomeScreenShell> {
     if (location.startsWith('/reports/sales')) return 6;
     if (location.startsWith('/reports/ipv')) return 7;
     if (location.startsWith('/audit-history')) return 8;
+    if (location.startsWith('/settings')) return 9;
 
     return 0; // Default to home
   }
@@ -417,7 +446,7 @@ class _HomeScreenShellState extends State<HomeScreenShell> {
         context.go('/audit-history');
         break;
       case 9:
-        // Logout - handled in HomeScreen
+        context.go('/settings');
         break;
     }
   }

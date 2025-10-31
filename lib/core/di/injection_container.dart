@@ -66,6 +66,7 @@ Future<void> init() async {
         outputRepository: sl(),
         userHistoryRepository: sl(),
         networkInfo: sl(),
+        sharedPreferences: sl(),
       ));
   sl.registerLazySingleton(() => ThemeBloc(themeService: sl()));
 

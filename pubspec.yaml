@@ -72,6 +72,7 @@ dependencies:
   sqlite3_flutter_libs: ^0.5.40
   sqlite3_web: ^0.3.2
   file_picker: ^10.3.3
+  package_info_plus: ^9.0.0
 
 dev_dependencies:
   flutter_test:

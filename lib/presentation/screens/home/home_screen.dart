@@ -107,7 +107,7 @@ class _HomeScreenState extends State<HomeScreen> {
   String _getPageTitle(int index) {
     switch (index) {
       case 0:
-        return 'Lucio Sales';
+        return 'Dashboard';
       case 1:
         return 'Measurement Units';
       case 2:
@@ -124,8 +124,10 @@ class _HomeScreenState extends State<HomeScreen> {
         return 'IPV Report';
       case 8:
         return 'Audit History';
+      case 9:
+        return 'Settings';
       default:
-        return 'Lucio Sales';
+        return 'Dashboard';
     }
   }
 
@@ -340,8 +342,8 @@ class _HomeScreenState extends State<HomeScreen> {
             label: 'Audit History',
           ),
           SidebarXItem(
-            icon: Icons.logout,
-            label: 'Logout',
+            icon: Icons.settings,
+            label: 'Settings',
           ),
         ],
     );
@@ -373,83 +375,7 @@ class _HomeScreenState extends State<HomeScreen> {
           );
         }
       },
-      child: _controller.selectedIndex == 9 ? _buildLogoutScreen() : widget.child,
-    );
-  }
-
-  Widget _buildLogoutScreen() {
-    final authService = sl<AuthService>();
-    final user = authService.currentUser;
-
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          CircleAvatar(
-            radius: 50,
-            backgroundColor: Theme.of(context).colorScheme.primary,
-            child: Text(
-              user?.name.substring(0, 1).toUpperCase() ?? 'U',
-              style: TextStyle(
-                fontSize: 40,
-                fontWeight: FontWeight.bold,
-                color: Theme.of(context).colorScheme.onPrimary,
-              ),
-            ),
-          ),
-          const SizedBox(height: 16),
-          Text(
-            user?.name ?? 'User',
-            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                  fontWeight: FontWeight.bold,
-                ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            user?.email ?? '',
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: Colors.grey[600],
-                ),
-          ),
-          const SizedBox(height: 32),
-          ElevatedButton.icon(
-            onPressed: () async {
-              final confirm = await showDialog<bool>(
-                context: context,
-                builder: (context) => AlertDialog(
-                  title: const Text('Logout'),
-                  content: const Text('Are you sure you want to logout?'),
-                  actions: [
-                    TextButton(
-                      onPressed: () => Navigator.of(context).pop(false),
-                      child: const Text('Cancel'),
-                    ),
-                    TextButton(
-                      onPressed: () => Navigator.of(context).pop(true),
-                      style: TextButton.styleFrom(foregroundColor: Colors.red),
-                      child: const Text('Logout'),
-                    ),
-                  ],
-                ),
-              );
-
-              if (confirm == true && mounted) {
-                await authService.signOut();
-                if (mounted) {
-                  context.go('/login');
-                }
-              }
-            },
-            icon: const Icon(Icons.logout),
-            label: const Text('Logout'),
-            style: ElevatedButton.styleFrom(
-              padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
-              backgroundColor: Colors.red,
-              foregroundColor: Colors.white,
-            ),
-          ),
-        ],
-      ),
+      child: widget.child,
     );
   }
 }
