@@ -16,6 +16,7 @@ class ProductEntry with _$ProductEntry {
     Product? product,
     required DateTime createdAt,
     required DateTime updatedAt,
+    @Default(false) bool synced,
   }) = _ProductEntry;
 
   factory ProductEntry.fromJson(Map<String, dynamic> json) =>

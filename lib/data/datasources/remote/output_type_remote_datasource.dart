@@ -21,9 +21,11 @@ class OutputTypeRemoteDataSourceImpl implements OutputTypeRemoteDataSource {
         .select()
         .order('name', ascending: true);
 
-    return (response as List)
-        .map((json) => OutputType.fromJson(json))
-        .toList();
+    return (response as List).map((json) {
+      final type = Map<String, dynamic>.from(json);
+      type['synced'] = true;
+      return OutputType.fromJson(type);
+    }).toList();
   }
 
   @override
@@ -34,7 +36,9 @@ class OutputTypeRemoteDataSourceImpl implements OutputTypeRemoteDataSource {
         .eq('id', id)
         .single();
 
-    return OutputType.fromJson(response);
+    final type = Map<String, dynamic>.from(response);
+    type['synced'] = true;
+    return OutputType.fromJson(type);
   }
 
   @override
@@ -42,6 +46,7 @@ class OutputTypeRemoteDataSourceImpl implements OutputTypeRemoteDataSource {
     final data = outputType.toJson();
     data.remove('created_at');
     data.remove('updated_at');
+    data.remove('synced'); // synced is a local-only field
 
     final response = await client
         .from('output_types')
@@ -49,7 +54,9 @@ class OutputTypeRemoteDataSourceImpl implements OutputTypeRemoteDataSource {
         .select()
         .single();
 
-    return OutputType.fromJson(response);
+    final type = Map<String, dynamic>.from(response);
+    type['synced'] = true;
+    return OutputType.fromJson(type);
   }
 
   @override
@@ -57,6 +64,7 @@ class OutputTypeRemoteDataSourceImpl implements OutputTypeRemoteDataSource {
     final data = outputType.toJson();
     data.remove('created_at');
     data.remove('updated_at');
+    data.remove('synced'); // synced is a local-only field
 
     final response = await client
         .from('output_types')
@@ -65,7 +73,9 @@ class OutputTypeRemoteDataSourceImpl implements OutputTypeRemoteDataSource {
         .select()
         .single();
 
-    return OutputType.fromJson(response);
+    final type = Map<String, dynamic>.from(response);
+    type['synced'] = true;
+    return OutputType.fromJson(type);
   }
 
   @override

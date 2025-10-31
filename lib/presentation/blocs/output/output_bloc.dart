@@ -44,12 +44,20 @@ class OutputBloc extends Bloc<OutputEvent, OutputState> {
     );
     result.fold(
       (failure) => emit(OutputError(failure.message)),
-      (paginatedResult) => emit(OutputPaginatedLoaded(
-        outputs: paginatedResult.items,
-        currentPage: paginatedResult.page,
-        totalPages: paginatedResult.totalPages,
-        totalItems: paginatedResult.totalCount,
-      )),
+      (paginatedResult) {
+        // If current page is empty and not the first page, go to previous page
+        if (paginatedResult.items.isEmpty && event.page > 1) {
+          add(LoadOutputsPaginated(page: event.page - 1, pageSize: event.pageSize));
+        } else {
+          emit(OutputPaginatedLoaded(
+            outputs: paginatedResult.items,
+            currentPage: paginatedResult.page,
+            totalPages: paginatedResult.totalPages,
+            totalItems: paginatedResult.totalCount,
+            pageSize: event.pageSize,
+          ));
+        }
+      },
     );
   }
 
@@ -160,12 +168,34 @@ class OutputBloc extends Bloc<OutputEvent, OutputState> {
     CreateOutput event,
     Emitter<OutputState> emit,
   ) async {
+    // Save current state before operation
+    final previousState = state;
+
     final result = await repository.create(event.output);
     result.fold(
-      (failure) => emit(OutputError(failure.message)),
+      (failure) {
+        emit(OutputError(failure.message));
+        // Reload based on previous state to recover from error
+        if (previousState is OutputPaginatedLoaded) {
+          add(LoadOutputsPaginated(
+            page: previousState.currentPage,
+            pageSize: previousState.pageSize,
+          ));
+        } else if (previousState is OutputLoaded) {
+          add(LoadOutputs());
+        }
+      },
       (_) {
         emit(const OutputOperationSuccess('Output created successfully'));
-        // Let the UI handle reload with pagination
+        // Reload based on previous state
+        if (previousState is OutputPaginatedLoaded) {
+          add(LoadOutputsPaginated(
+            page: previousState.currentPage,
+            pageSize: previousState.pageSize,
+          ));
+        } else {
+          add(LoadOutputs());
+        }
       },
     );
   }
@@ -174,12 +204,34 @@ class OutputBloc extends Bloc<OutputEvent, OutputState> {
     UpdateOutput event,
     Emitter<OutputState> emit,
   ) async {
+    // Save current state before operation
+    final previousState = state;
+
     final result = await repository.update(event.output);
     result.fold(
-      (failure) => emit(OutputError(failure.message)),
+      (failure) {
+        emit(OutputError(failure.message));
+        // Reload based on previous state to recover from error
+        if (previousState is OutputPaginatedLoaded) {
+          add(LoadOutputsPaginated(
+            page: previousState.currentPage,
+            pageSize: previousState.pageSize,
+          ));
+        } else if (previousState is OutputLoaded) {
+          add(LoadOutputs());
+        }
+      },
       (_) {
         emit(const OutputOperationSuccess('Output updated successfully'));
-        // Let the UI handle reload with pagination
+        // Reload based on previous state
+        if (previousState is OutputPaginatedLoaded) {
+          add(LoadOutputsPaginated(
+            page: previousState.currentPage,
+            pageSize: previousState.pageSize,
+          ));
+        } else {
+          add(LoadOutputs());
+        }
       },
     );
   }
@@ -188,12 +240,34 @@ class OutputBloc extends Bloc<OutputEvent, OutputState> {
     DeleteOutput event,
     Emitter<OutputState> emit,
   ) async {
+    // Save current state before operation
+    final previousState = state;
+
     final result = await repository.delete(event.id);
     result.fold(
-      (failure) => emit(OutputError(failure.message)),
+      (failure) {
+        emit(OutputError(failure.message));
+        // Reload based on previous state to recover from error
+        if (previousState is OutputPaginatedLoaded) {
+          add(LoadOutputsPaginated(
+            page: previousState.currentPage,
+            pageSize: previousState.pageSize,
+          ));
+        } else if (previousState is OutputLoaded) {
+          add(LoadOutputs());
+        }
+      },
       (_) {
         emit(const OutputOperationSuccess('Output deleted successfully'));
-        // Let the UI handle reload with pagination
+        // Reload based on previous state
+        if (previousState is OutputPaginatedLoaded) {
+          add(LoadOutputsPaginated(
+            page: previousState.currentPage,
+            pageSize: previousState.pageSize,
+          ));
+        } else {
+          add(LoadOutputs());
+        }
       },
     );
   }

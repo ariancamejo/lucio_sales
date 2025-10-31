@@ -31,6 +31,20 @@
 
   <title>lucio_sales</title>
   <link rel="manifest" href="manifest.json">
+
+  <script>
+    // Configure Drift worker before Flutter loads
+    if ('serviceWorker' in navigator) {
+      // Preload the WASM file
+      const link = document.createElement('link');
+      link.rel = 'preload';
+      link.href = '/sqlite3.wasm';
+      link.as = 'fetch';
+      link.type = 'application/wasm';
+      link.crossOrigin = 'anonymous';
+      document.head.appendChild(link);
+    }
+  </script>
 </head>
 <body>
   <script src="flutter_bootstrap.js" async></script>

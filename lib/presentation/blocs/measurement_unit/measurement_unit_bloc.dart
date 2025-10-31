@@ -37,12 +37,20 @@ class MeasurementUnitBloc extends Bloc<MeasurementUnitEvent, MeasurementUnitStat
     );
     result.fold(
       (failure) => emit(MeasurementUnitError(failure.message)),
-      (paginatedResult) => emit(MeasurementUnitPaginatedLoaded(
-        measurementUnits: paginatedResult.items,
-        currentPage: paginatedResult.page,
-        totalPages: paginatedResult.totalPages,
-        totalItems: paginatedResult.totalCount,
-      )),
+      (paginatedResult) {
+        // If current page is empty and not the first page, go to previous page
+        if (paginatedResult.items.isEmpty && event.page > 1) {
+          add(LoadMeasurementUnitsPaginated(page: event.page - 1, pageSize: event.pageSize));
+        } else {
+          emit(MeasurementUnitPaginatedLoaded(
+            measurementUnits: paginatedResult.items,
+            currentPage: paginatedResult.page,
+            totalPages: paginatedResult.totalPages,
+            totalItems: paginatedResult.totalCount,
+            pageSize: event.pageSize,
+          ));
+        }
+      },
     );
   }
 
@@ -50,12 +58,34 @@ class MeasurementUnitBloc extends Bloc<MeasurementUnitEvent, MeasurementUnitStat
     CreateMeasurementUnit event,
     Emitter<MeasurementUnitState> emit,
   ) async {
+    // Save current state before operation
+    final previousState = state;
+
     final result = await repository.create(event.measurementUnit);
     result.fold(
-      (failure) => emit(MeasurementUnitError(failure.message)),
+      (failure) {
+        emit(MeasurementUnitError(failure.message));
+        // Reload based on previous state to recover from error
+        if (previousState is MeasurementUnitPaginatedLoaded) {
+          add(LoadMeasurementUnitsPaginated(
+            page: previousState.currentPage,
+            pageSize: previousState.pageSize,
+          ));
+        } else if (previousState is MeasurementUnitLoaded) {
+          add(LoadMeasurementUnits());
+        }
+      },
       (_) {
         emit(const MeasurementUnitOperationSuccess('Measurement unit created successfully'));
-        add(LoadMeasurementUnits());
+        // Reload based on previous state
+        if (previousState is MeasurementUnitPaginatedLoaded) {
+          add(LoadMeasurementUnitsPaginated(
+            page: previousState.currentPage,
+            pageSize: previousState.pageSize,
+          ));
+        } else {
+          add(LoadMeasurementUnits());
+        }
       },
     );
   }
@@ -64,12 +94,34 @@ class MeasurementUnitBloc extends Bloc<MeasurementUnitEvent, MeasurementUnitStat
     UpdateMeasurementUnit event,
     Emitter<MeasurementUnitState> emit,
   ) async {
+    // Save current state before operation
+    final previousState = state;
+
     final result = await repository.update(event.measurementUnit);
     result.fold(
-      (failure) => emit(MeasurementUnitError(failure.message)),
+      (failure) {
+        emit(MeasurementUnitError(failure.message));
+        // Reload based on previous state to recover from error
+        if (previousState is MeasurementUnitPaginatedLoaded) {
+          add(LoadMeasurementUnitsPaginated(
+            page: previousState.currentPage,
+            pageSize: previousState.pageSize,
+          ));
+        } else if (previousState is MeasurementUnitLoaded) {
+          add(LoadMeasurementUnits());
+        }
+      },
       (_) {
         emit(const MeasurementUnitOperationSuccess('Measurement unit updated successfully'));
-        add(LoadMeasurementUnits());
+        // Reload based on previous state
+        if (previousState is MeasurementUnitPaginatedLoaded) {
+          add(LoadMeasurementUnitsPaginated(
+            page: previousState.currentPage,
+            pageSize: previousState.pageSize,
+          ));
+        } else {
+          add(LoadMeasurementUnits());
+        }
       },
     );
   }
@@ -78,12 +130,34 @@ class MeasurementUnitBloc extends Bloc<MeasurementUnitEvent, MeasurementUnitStat
     DeleteMeasurementUnit event,
     Emitter<MeasurementUnitState> emit,
   ) async {
+    // Save current state before operation
+    final previousState = state;
+
     final result = await repository.delete(event.id);
     result.fold(
-      (failure) => emit(MeasurementUnitError(failure.message)),
+      (failure) {
+        emit(MeasurementUnitError(failure.message));
+        // Reload based on previous state to recover from error
+        if (previousState is MeasurementUnitPaginatedLoaded) {
+          add(LoadMeasurementUnitsPaginated(
+            page: previousState.currentPage,
+            pageSize: previousState.pageSize,
+          ));
+        } else if (previousState is MeasurementUnitLoaded) {
+          add(LoadMeasurementUnits());
+        }
+      },
       (_) {
         emit(const MeasurementUnitOperationSuccess('Measurement unit deleted successfully'));
-        add(LoadMeasurementUnits());
+        // Reload based on previous state
+        if (previousState is MeasurementUnitPaginatedLoaded) {
+          add(LoadMeasurementUnitsPaginated(
+            page: previousState.currentPage,
+            pageSize: previousState.pageSize,
+          ));
+        } else {
+          add(LoadMeasurementUnits());
+        }
       },
     );
   }

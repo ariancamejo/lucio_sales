@@ -9,6 +9,7 @@ import '../../../domain/entities/output.dart';
 import '../../../domain/entities/product.dart';
 import '../../blocs/output/output_bloc.dart';
 import '../../blocs/output/output_event.dart';
+import '../../blocs/output/output_state.dart';
 import '../../blocs/product/product_bloc.dart';
 import '../../blocs/product/product_event.dart';
 import '../../blocs/measurement_unit/measurement_unit_bloc.dart';
@@ -20,11 +21,12 @@ import '../../blocs/output_type/output_type_state.dart';
 import '../../widgets/searchable_product_field.dart';
 
 class OutputFormScreen extends StatefulWidget {
-  final Output? output;
+  /// Output ID for editing (from route parameter)
+  final String? outputId;
 
   const OutputFormScreen({
     super.key,
-    this.output,
+    this.outputId,
   });
 
   @override
@@ -40,24 +42,43 @@ class _OutputFormScreenState extends State<OutputFormScreen> {
   String? _selectedMeasurementUnitId;
   String? _selectedOutputTypeId;
   DateTime _selectedDate = DateTime.now();
+  Output? _loadedOutput;
 
-  bool get isEditing => widget.output != null;
+  bool _isLoadingData = false;
+
+  bool get isEditing => widget.outputId != null;
 
   @override
   void initState() {
     super.initState();
-    context.read<ProductBloc>().add(LoadProducts());
+    _loadFormData();
+  }
+
+  Future<void> _loadFormData() async {
+    setState(() => _isLoadingData = true);
+
+    // Load all dependencies first
+    context.read<ProductBloc>().add(const LoadProducts());
     context.read<MeasurementUnitBloc>().add(LoadMeasurementUnits());
     context.read<OutputTypeBloc>().add(LoadOutputTypes());
 
-    if (isEditing) {
-      _quantityController.text = widget.output!.quantity.toString();
-      _totalAmountController.text = widget.output!.totalAmount.toString();
-      _selectedProduct = widget.output!.product;
-      _selectedMeasurementUnitId = widget.output!.measurementUnitId;
-      _selectedOutputTypeId = widget.output!.outputTypeId;
-      _selectedDate = widget.output!.date;
+    // If editing, load the output entity
+    if (widget.outputId != null) {
+      context.read<OutputBloc>().add(LoadOutputs());
+    } else {
+      // For new outputs, we're done loading
+      setState(() => _isLoadingData = false);
     }
+  }
+
+  void _loadOutputData(Output output) {
+    _quantityController.text = output.quantity.toString();
+    _totalAmountController.text = output.totalAmount.toString();
+    _selectedProduct = output.product;
+    _selectedMeasurementUnitId = output.measurementUnitId;
+    _selectedOutputTypeId = output.outputTypeId;
+    _selectedDate = output.date;
+    _loadedOutput = output;
   }
 
   @override
@@ -69,11 +90,38 @@ class _OutputFormScreenState extends State<OutputFormScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(isEditing ? 'Edit Output' : 'New Output'),
-      ),
-      body: Form(
+    return MultiBlocListener(
+      listeners: [
+        BlocListener<OutputBloc, OutputState>(
+          listener: (context, state) {
+            if (state is OutputLoaded && widget.outputId != null && _loadedOutput == null) {
+              try {
+                final output = state.outputs.firstWhere(
+                  (o) => o.id == widget.outputId,
+                );
+                setState(() {
+                  _loadOutputData(output);
+                  _isLoadingData = false; // Mark loading as complete
+                });
+              } catch (e) {
+                debugPrint('Output with ID ${widget.outputId} not found: $e');
+                setState(() => _isLoadingData = false);
+              }
+            }
+          },
+        ),
+      ],
+      child: _isLoadingData
+          ? const Scaffold(
+              body: Center(
+                child: CircularProgressIndicator(),
+              ),
+            )
+          : Scaffold(
+        appBar: AppBar(
+          title: Text(isEditing ? 'Edit Output' : 'New Output'),
+        ),
+        body: Form(
         key: _formKey,
         autovalidateMode: AutovalidateMode.onUserInteraction,
         child: ListView(
@@ -240,6 +288,7 @@ class _OutputFormScreenState extends State<OutputFormScreen> {
           ],
         ),
       ),
+      ),
     );
   }
 
@@ -295,15 +344,15 @@ class _OutputFormScreenState extends State<OutputFormScreen> {
 
       final now = DateTime.now();
       final output = Output(
-        id: isEditing ? widget.output!.id : const Uuid().v4(),
-        userId: isEditing ? widget.output!.userId : currentUser!.id,
+        id: isEditing ? _loadedOutput!.id : const Uuid().v4(),
+        userId: isEditing ? _loadedOutput!.userId : currentUser!.id,
         productId: _selectedProduct!.id,
         quantity: double.parse(_quantityController.text),
         measurementUnitId: _selectedMeasurementUnitId!,
         totalAmount: double.parse(_totalAmountController.text),
         outputTypeId: _selectedOutputTypeId!,
         date: _selectedDate,
-        createdAt: isEditing ? widget.output!.createdAt : now,
+        createdAt: isEditing ? _loadedOutput!.createdAt : now,
         updatedAt: now,
       );
 

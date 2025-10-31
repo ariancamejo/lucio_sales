@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 import '../../blocs/product/product_bloc.dart';
 import '../../blocs/product/product_event.dart';
 import '../../blocs/product/product_state.dart';
+import '../../blocs/sync/sync_bloc.dart';
+import '../../blocs/sync/sync_event.dart';
 
-import 'product_form_screen.dart';
 import 'product_search_delegate.dart';
-import '../product_entry/product_entry_form_screen.dart';
-import '../home/home_screen.dart';
 
 class ProductListScreen extends StatefulWidget {
   const ProductListScreen({super.key});
@@ -298,11 +298,7 @@ class _ProductListScreenState extends State<ProductListScreen> {
           FloatingActionButton(
             heroTag: 'add',
             onPressed: () async {
-              await Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (context) => const ProductFormScreen(),
-                ),
-              );
+              await context.push('/products/new');
               // Reload after adding product
               if (mounted) {
                 _applyFilters();
@@ -321,7 +317,6 @@ class _ProductListScreenState extends State<ProductListScreen> {
                 backgroundColor: Colors.red,
               ),
             );
-            _loadPage(_currentPage);
           } else if (state is ProductOperationSuccess) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
@@ -329,7 +324,13 @@ class _ProductListScreenState extends State<ProductListScreen> {
                 backgroundColor: Colors.green,
               ),
             );
-            _loadPage(_currentPage);
+          } else if (state is ProductPaginatedLoaded) {
+            // Sync local page state with bloc state
+            if (_currentPage != state.currentPage) {
+              setState(() {
+                _currentPage = state.currentPage;
+              });
+            }
           }
         },
         builder: (context, state) {
@@ -388,13 +389,7 @@ class _ProductListScreenState extends State<ProductListScreen> {
                                 );
                               } else if (direction == DismissDirection.startToEnd) {
                                 // Swipe right to edit
-                                await Navigator.of(context).push(
-                                  MaterialPageRoute(
-                                    builder: (context) => ProductFormScreen(
-                                      product: product,
-                                    ),
-                                  ),
-                                );
+                                await context.push('/products/${product.id}/edit');
                                 // Reload after edit
                                 if (mounted) {
                                   _applyFilters();
@@ -455,13 +450,7 @@ class _ProductListScreenState extends State<ProductListScreen> {
                               elevation: 2,
                               child: InkWell(
                                 onTap: () async {
-                                  await Navigator.of(context).push(
-                                    MaterialPageRoute(
-                                      builder: (context) => ProductFormScreen(
-                                        product: product,
-                                      ),
-                                    ),
-                                  );
+                                  await context.push('/products/${product.id}/edit');
                                   // Reload after edit
                                   if (mounted) {
                                     _applyFilters();
@@ -527,12 +516,34 @@ class _ProductListScreenState extends State<ProductListScreen> {
                                                     overflow: TextOverflow.ellipsis,
                                                   ),
                                                 ),
+                                                if (!product.synced)
+                                                  Tooltip(
+                                                    message: 'Not synced - Tap to sync',
+                                                    child: InkWell(
+                                                      onTap: () {
+                                                        context.read<SyncBloc>().add(StartSync());
+                                                      },
+                                                      child: Container(
+                                                        margin: const EdgeInsets.only(left: 6),
+                                                        padding: const EdgeInsets.all(4),
+                                                        decoration: BoxDecoration(
+                                                          color: Colors.orange.withValues(alpha: 0.1),
+                                                          shape: BoxShape.circle,
+                                                        ),
+                                                        child: const Icon(
+                                                          Icons.cloud_off,
+                                                          size: 14,
+                                                          color: Colors.orange,
+                                                        ),
+                                                      ),
+                                                    ),
+                                                  ),
                                                 if (!product.active)
                                                   Container(
                                                     margin: const EdgeInsets.only(left: 8),
                                                     padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                                                     decoration: BoxDecoration(
-                                                      color: Colors.red.withOpacity(0.1),
+                                                      color: Colors.red.withValues(alpha: 0.1),
                                                       borderRadius: BorderRadius.circular(4),
                                                       border: Border.all(color: Colors.red, width: 1),
                                                     ),
@@ -576,22 +587,17 @@ class _ProductListScreenState extends State<ProductListScreen> {
                                         tooltip: 'More options',
                                         onSelected: (value) async {
                                           if (value == 'add_stock') {
-                                            await Navigator.of(context).push(
-                                              MaterialPageRoute(
-                                                builder: (context) => ProductEntryFormScreen(
-                                                  preselectedProduct: product,
-                                                ),
-                                              ),
+                                            await context.push(
+                                              '/stock-entries/new?productId=${product.id}',
                                             );
                                             // Reload the list after adding stock
                                             if (mounted) {
                                               _applyFilters();
                                             }
                                           } else if (value == 'view_entries') {
-                                            // Navegar a ProductEntry usando el HomeScreen
-                                            homeScreenKey.currentState?.navigateToProductEntryWithFilter(
-                                              product.id,
-                                              product.name,
+                                            // Navigate to Stock Entries with filter
+                                            context.go(
+                                              '/stock-entries?productId=${product.id}&productName=${Uri.encodeComponent(product.name)}',
                                             );
                                           }
                                         },

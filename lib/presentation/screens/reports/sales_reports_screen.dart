@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:fl_chart/fl_chart.dart';
 import 'package:intl/intl.dart';
 import 'dart:io';
 import 'package:excel/excel.dart';
-import 'package:path_provider/path_provider.dart';
+import 'package:file_picker/file_picker.dart';
 import '../../../core/di/injection_container.dart';
 import '../../../core/services/statistics_service.dart';
+import '../../../core/utils/file_download.dart';
 import '../../../domain/models/sales_statistics.dart';
 
 
@@ -71,6 +73,7 @@ class _SalesReportsScreenState extends State<SalesReportsScreen> {
     if (_statistics == null) return;
 
     try {
+      // Generate Excel content
       final excel = Excel.createExcel();
       final sheet = excel['Sales Report'];
 
@@ -107,21 +110,57 @@ class _SalesReportsScreenState extends State<SalesReportsScreen> {
         ]);
       }
 
-      // Save file
-      final directory = await getApplicationDocumentsDirectory();
-      final filePath = '${directory.path}/sales_report_${DateFormat('yyyyMMdd').format(DateTime.now())}.xlsx';
-      final file = File(filePath);
-      await file.writeAsBytes(excel.encode()!);
+      // Encode Excel to bytes
+      final excelBytes = excel.encode()!;
 
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Exported to: $filePath')),
+      // Generate default filename
+      final defaultFileName = 'sales_report_${DateFormat('yyyyMMdd_HHmmss').format(DateTime.now())}.xlsx';
+
+      if (kIsWeb) {
+        // For Web: Use browser download functionality
+        downloadFile(excelBytes, defaultFileName);
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Excel file downloaded successfully!')),
+          );
+        }
+      } else {
+        // For Desktop/Mobile: Use file picker to let user choose location
+        final outputPath = await FilePicker.platform.saveFile(
+          dialogTitle: 'Save Excel File',
+          fileName: defaultFileName,
+          type: FileType.custom,
+          allowedExtensions: ['xlsx'],
         );
+
+        if (outputPath == null) {
+          // User canceled the picker
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Export canceled')),
+            );
+          }
+          return;
+        }
+
+        // Write file to selected location
+        final file = File(outputPath);
+        await file.writeAsBytes(excelBytes);
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Exported to: $outputPath')),
+          );
+        }
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Export error: $e')),
+          SnackBar(
+            content: Text('Export error: $e'),
+            backgroundColor: Colors.red,
+          ),
         );
       }
     }

@@ -5,19 +5,23 @@ import '../../../domain/entities/product.dart';
 import '../../../domain/entities/product_entry.dart';
 import '../../blocs/product/product_bloc.dart';
 import '../../blocs/product/product_event.dart';
+import '../../blocs/product/product_state.dart';
 import '../../blocs/product_entry/product_entry_bloc.dart';
 import '../../blocs/product_entry/product_entry_event.dart';
 import '../../blocs/product_entry/product_entry_state.dart';
 import '../../widgets/searchable_product_field.dart';
 
 class ProductEntryFormScreen extends StatefulWidget {
-  final ProductEntry? productEntry;
-  final Product? preselectedProduct;
+  /// Entry ID for editing existing entry
+  final String? entryId;
+
+  /// Pre-selected product ID (from query parameters or navigation)
+  final String? preSelectedProductId;
 
   const ProductEntryFormScreen({
     super.key,
-    this.productEntry,
-    this.preselectedProduct,
+    this.entryId,
+    this.preSelectedProductId,
   });
 
   @override
@@ -32,21 +36,46 @@ class _ProductEntryFormScreenState extends State<ProductEntryFormScreen> {
   Product? _selectedProduct;
   DateTime _selectedDate = DateTime.now();
   bool _isLoading = false;
+  bool _isLoadingData = false;
+  ProductEntry? _loadedEntry;
+
+  bool get isEditing => widget.entryId != null;
 
   @override
   void initState() {
     super.initState();
+    _loadFormData();
+  }
+
+  Future<void> _loadFormData() async {
+    // Debug: Print received parameters
+    debugPrint('ProductEntryFormScreen initialized');
+    debugPrint('entryId: ${widget.entryId}');
+    debugPrint('preSelectedProductId: ${widget.preSelectedProductId}');
+
+    // If editing, set loading state
+    if (widget.entryId != null) {
+      setState(() => _isLoadingData = true);
+    }
+
+    // Load products first
     context.read<ProductBloc>().add(const LoadProducts());
 
-    if (widget.productEntry != null) {
-      _quantityController.text = widget.productEntry!.quantity.toString();
-      _notesController.text = widget.productEntry!.notes ?? '';
-      _selectedDate = widget.productEntry!.date;
-      _selectedProduct = widget.productEntry!.product;
-    } else if (widget.preselectedProduct != null) {
-      // If a product is preselected, set it
-      _selectedProduct = widget.preselectedProduct;
+    // If editing, load product entries
+    if (widget.entryId != null) {
+      context.read<ProductEntryBloc>().add(LoadProductEntries());
     }
+
+    // Note: If preSelectedProductId is provided, the product will be auto-selected
+    // when ProductBloc finishes loading (see BlocListener in build method)
+  }
+
+  void _loadEntryData(ProductEntry entry) {
+    _quantityController.text = entry.quantity.toString();
+    _notesController.text = entry.notes ?? '';
+    _selectedProduct = entry.product;
+    _selectedDate = entry.date;
+    _loadedEntry = entry;
   }
 
   @override
@@ -72,7 +101,7 @@ class _ProductEntryFormScreenState extends State<ProductEntryFormScreen> {
 
   Future<void> _handleSubmit() async {
     if (!_formKey.currentState!.validate()) return;
-    if (_selectedProduct == null && widget.productEntry == null) {
+    if (_selectedProduct == null && !isEditing) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Please select a product'),
@@ -88,7 +117,7 @@ class _ProductEntryFormScreenState extends State<ProductEntryFormScreen> {
       final quantity = double.parse(_quantityController.text);
       final notes = _notesController.text.trim();
 
-      if (widget.productEntry == null) {
+      if (!isEditing) {
         // Create new entry
         final newEntry = ProductEntry(
           id: '',
@@ -104,14 +133,14 @@ class _ProductEntryFormScreenState extends State<ProductEntryFormScreen> {
         context.read<ProductEntryBloc>().add(CreateProductEntry(newEntry));
       } else {
         // Update existing entry
-        final updatedEntry = widget.productEntry!.copyWith(
+        final updatedEntry = _loadedEntry!.copyWith(
           quantity: quantity,
           date: _selectedDate,
           notes: notes.isEmpty ? null : notes,
         );
 
         context.read<ProductEntryBloc>().add(
-          UpdateProductEntry(updatedEntry, widget.productEntry!),
+          UpdateProductEntry(updatedEntry, _loadedEntry!),
         );
       }
       // Don't pop here - let the BlocListener handle it after success
@@ -133,33 +162,92 @@ class _ProductEntryFormScreenState extends State<ProductEntryFormScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return BlocListener<ProductEntryBloc, ProductEntryState>(
-      listener: (context, state) {
-        if (state is ProductEntryOperationSuccess) {
-          // Show success message
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(state.message),
-              backgroundColor: Colors.green,
-            ),
-          );
-          // Close the form and return to the list
-          Navigator.of(context).pop();
-        } else if (state is ProductEntryError) {
-          // Show error message
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(state.message),
-              backgroundColor: Colors.red,
-            ),
-          );
-          // Reset loading state
-          setState(() => _isLoading = false);
-        }
-      },
-      child: Scaffold(
+    return MultiBlocListener(
+      listeners: [
+        // Listen to ProductBloc to auto-select product when preSelectedProductId is provided
+        BlocListener<ProductBloc, ProductState>(
+          listener: (context, state) {
+            debugPrint('ProductBloc state changed: ${state.runtimeType}');
+
+            // When products are loaded and we have a preSelectedProductId, find and select it
+            if (state is ProductLoaded && widget.preSelectedProductId != null) {
+              debugPrint('Products loaded! Count: ${state.products.length}');
+              debugPrint('Looking for product ID: ${widget.preSelectedProductId}');
+              debugPrint('Current selected product: ${_selectedProduct?.name}');
+
+              // Only auto-select if no product is selected yet
+              if (_selectedProduct == null) {
+                try {
+                  // Find the product with matching ID
+                  final product = state.products.firstWhere(
+                    (p) => p.id == widget.preSelectedProductId,
+                  );
+                  debugPrint('Found product: ${product.name}');
+                  setState(() {
+                    _selectedProduct = product;
+                  });
+                  debugPrint('Product auto-selected!');
+                } catch (e) {
+                  // Product not found, ignore
+                  debugPrint('❌ Product with ID ${widget.preSelectedProductId} not found: $e');
+                }
+              }
+            }
+          },
+        ),
+        // Listen to ProductEntryBloc for loading entries (when editing)
+        BlocListener<ProductEntryBloc, ProductEntryState>(
+          listener: (context, state) {
+            // Load entry data when entries are loaded
+            if (state is ProductEntryLoaded && widget.entryId != null && _loadedEntry == null) {
+              try {
+                final entry = state.productEntries.firstWhere(
+                  (e) => e.id == widget.entryId,
+                );
+                setState(() {
+                  _loadEntryData(entry);
+                  _isLoadingData = false; // Mark loading as complete
+                });
+              } catch (e) {
+                debugPrint('ProductEntry with ID ${widget.entryId} not found: $e');
+                setState(() => _isLoadingData = false);
+              }
+            }
+
+            // Handle operation results
+            if (state is ProductEntryOperationSuccess) {
+              // Show success message
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(state.message),
+                  backgroundColor: Colors.green,
+                ),
+              );
+              // Close the form and return to the list
+              Navigator.of(context).pop();
+            } else if (state is ProductEntryError) {
+              // Show error message
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(state.message),
+                  backgroundColor: Colors.red,
+                ),
+              );
+              // Reset loading state
+              setState(() => _isLoading = false);
+            }
+          },
+        ),
+      ],
+      child: _isLoadingData
+          ? const Scaffold(
+              body: Center(
+                child: CircularProgressIndicator(),
+              ),
+            )
+          : Scaffold(
         appBar: AppBar(
-          title: Text(widget.productEntry == null ? 'New Stock Entry' : 'Edit Stock Entry'),
+          title: Text(isEditing ? 'Edit Stock Entry' : 'New Stock Entry'),
         ),
         body: SafeArea(
         child: SingleChildScrollView(
@@ -170,7 +258,7 @@ class _ProductEntryFormScreenState extends State<ProductEntryFormScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                if (widget.productEntry == null)
+                if (!isEditing)
                   SearchableProductField(
                     initialProduct: _selectedProduct,
                     onChanged: (product) {
@@ -202,14 +290,14 @@ class _ProductEntryFormScreenState extends State<ProductEntryFormScreen> {
                                   style: Theme.of(context).textTheme.bodySmall,
                                 ),
                                 Text(
-                                  widget.productEntry!.product?.name ?? 'Product ID: ${widget.productEntry!.productId}',
+                                  _loadedEntry?.product?.name ?? 'Product ID: ${_loadedEntry?.productId ?? ""}',
                                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                                         fontWeight: FontWeight.bold,
                                       ),
                                 ),
-                                if (widget.productEntry!.product != null)
+                                if (_loadedEntry?.product != null)
                                   Text(
-                                    'Code: ${widget.productEntry!.product!.code}',
+                                    'Code: ${_loadedEntry!.product!.code}',
                                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
                                           color: Colors.grey[600],
                                         ),
@@ -294,7 +382,7 @@ class _ProductEntryFormScreenState extends State<ProductEntryFormScreen> {
                           width: 20,
                           child: CircularProgressIndicator(strokeWidth: 2),
                         )
-                      : Text(widget.productEntry == null ? 'Add Entry' : 'Update Entry'),
+                      : Text(isEditing ? 'Update Entry' : 'Add Entry'),
                 ),
               ],
             ),

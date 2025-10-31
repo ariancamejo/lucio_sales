@@ -40,12 +40,20 @@ class ProductBloc extends Bloc<ProductEvent, ProductState> {
     );
     result.fold(
       (failure) => emit(ProductError(failure.message)),
-      (paginatedResult) => emit(ProductPaginatedLoaded(
-        products: paginatedResult.items,
-        currentPage: paginatedResult.page,
-        totalPages: paginatedResult.totalPages,
-        totalItems: paginatedResult.totalCount,
-      )),
+      (paginatedResult) {
+        // If current page is empty and not the first page, go to previous page
+        if (paginatedResult.items.isEmpty && event.page > 1) {
+          add(LoadProductsPaginated(page: event.page - 1, pageSize: event.pageSize, includeInactive: event.includeInactive));
+        } else {
+          emit(ProductPaginatedLoaded(
+            products: paginatedResult.items,
+            currentPage: paginatedResult.page,
+            totalPages: paginatedResult.totalPages,
+            totalItems: paginatedResult.totalCount,
+            pageSize: event.pageSize,
+          ));
+        }
+      },
     );
   }
 
@@ -133,12 +141,34 @@ class ProductBloc extends Bloc<ProductEvent, ProductState> {
     CreateProduct event,
     Emitter<ProductState> emit,
   ) async {
+    // Save current state before operation
+    final previousState = state;
+
     final result = await repository.create(event.product);
     result.fold(
-      (failure) => emit(ProductError(failure.message)),
+      (failure) {
+        emit(ProductError(failure.message));
+        // Reload based on previous state to recover from error
+        if (previousState is ProductPaginatedLoaded) {
+          add(LoadProductsPaginated(
+            page: previousState.currentPage,
+            pageSize: previousState.pageSize,
+          ));
+        } else if (previousState is ProductLoaded) {
+          add(const LoadProducts());
+        }
+      },
       (_) {
         emit(const ProductOperationSuccess('Product created successfully'));
-        add(const LoadProducts());
+        // Reload based on previous state
+        if (previousState is ProductPaginatedLoaded) {
+          add(LoadProductsPaginated(
+            page: previousState.currentPage,
+            pageSize: previousState.pageSize,
+          ));
+        } else {
+          add(const LoadProducts());
+        }
       },
     );
   }
@@ -147,12 +177,34 @@ class ProductBloc extends Bloc<ProductEvent, ProductState> {
     UpdateProduct event,
     Emitter<ProductState> emit,
   ) async {
+    // Save current state before operation
+    final previousState = state;
+
     final result = await repository.update(event.product);
     result.fold(
-      (failure) => emit(ProductError(failure.message)),
+      (failure) {
+        emit(ProductError(failure.message));
+        // Reload based on previous state to recover from error
+        if (previousState is ProductPaginatedLoaded) {
+          add(LoadProductsPaginated(
+            page: previousState.currentPage,
+            pageSize: previousState.pageSize,
+          ));
+        } else if (previousState is ProductLoaded) {
+          add(const LoadProducts());
+        }
+      },
       (_) {
         emit(const ProductOperationSuccess('Product updated successfully'));
-        add(const LoadProducts());
+        // Reload based on previous state
+        if (previousState is ProductPaginatedLoaded) {
+          add(LoadProductsPaginated(
+            page: previousState.currentPage,
+            pageSize: previousState.pageSize,
+          ));
+        } else {
+          add(const LoadProducts());
+        }
       },
     );
   }
@@ -161,12 +213,34 @@ class ProductBloc extends Bloc<ProductEvent, ProductState> {
     DeleteProduct event,
     Emitter<ProductState> emit,
   ) async {
+    // Save current state before operation
+    final previousState = state;
+
     final result = await repository.delete(event.id);
     result.fold(
-      (failure) => emit(ProductError(failure.message)),
+      (failure) {
+        emit(ProductError(failure.message));
+        // Reload based on previous state to recover from error
+        if (previousState is ProductPaginatedLoaded) {
+          add(LoadProductsPaginated(
+            page: previousState.currentPage,
+            pageSize: previousState.pageSize,
+          ));
+        } else if (previousState is ProductLoaded) {
+          add(const LoadProducts());
+        }
+      },
       (_) {
         emit(const ProductOperationSuccess('Product deleted successfully'));
-        add(const LoadProducts());
+        // Reload based on previous state
+        if (previousState is ProductPaginatedLoaded) {
+          add(LoadProductsPaginated(
+            page: previousState.currentPage,
+            pageSize: previousState.pageSize,
+          ));
+        } else {
+          add(const LoadProducts());
+        }
       },
     );
   }

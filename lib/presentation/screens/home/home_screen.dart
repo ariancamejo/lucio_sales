@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 import 'package:sidebarx/sidebarx.dart';
 import '../../../core/di/injection_container.dart';
 import '../../../core/services/auth_service.dart';
@@ -19,47 +20,53 @@ import '../../blocs/product_entry/product_entry_bloc.dart';
 import '../../blocs/product_entry/product_entry_event.dart';
 import '../../blocs/output/output_bloc.dart';
 import '../../blocs/output/output_event.dart';
-import '../measurement_unit/measurement_unit_list_screen.dart';
-import '../product/product_list_screen.dart';
-import '../product_entry/product_entry_list_screen.dart';
-import '../output_type/output_type_list_screen.dart';
-import '../output/output_list_screen.dart';
-import '../auth/login_screen.dart';
-import '../reports/sales_reports_screen.dart';
-import '../reports/ipv_report_screen.dart';
-import 'home_content.dart';
 
 // Global key para acceder al HomeScreen desde otras pantallas
 final GlobalKey<_HomeScreenState> homeScreenKey = GlobalKey<_HomeScreenState>();
 
 class HomeScreen extends StatefulWidget {
-  const HomeScreen({super.key});
+  /// The currently selected index in the sidebar
+  final int selectedIndex;
+
+  /// Callback when a sidebar item is selected
+  final void Function(int) onNavigate;
+
+  /// The child widget to display in the main content area
+  final Widget child;
+
+  const HomeScreen({
+    super.key,
+    required this.selectedIndex,
+    required this.onNavigate,
+    required this.child,
+  });
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  final _controller = SidebarXController(selectedIndex: 0, extended: true);
+  late SidebarXController _controller;
   final _key = GlobalKey<ScaffoldState>();
-
-  // Método público para navegar a ProductEntry con filtro
-  void navigateToProductEntryWithFilter(String productId, String productName) {
-    // Cambiar al tab de ProductEntry (índice 3)
-    _controller.selectIndex(3);
-    // Esperar un frame para que se renderice la pantalla
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      productEntryListKey.currentState?.applyProductFilter(productId, productName);
-    });
-  }
+  bool _isProgrammaticChange = false;
 
   @override
   void initState() {
     super.initState();
+    _controller = SidebarXController(
+      selectedIndex: widget.selectedIndex,
+      extended: true,
+    );
+
     // Listen to sidebar selection changes to close drawer on mobile
     _controller.addListener(() {
       if (_isMobile(context) && _key.currentState?.isDrawerOpen == true) {
         Navigator.of(context).pop();
+      }
+      // Only call navigation callback when the change is from user interaction
+      // Skip if the change is programmatic (from didUpdateWidget)
+      if (!_isProgrammaticChange) {
+        widget.onNavigate(_controller.selectedIndex);
       }
     });
 
@@ -70,6 +77,24 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   @override
+  void didUpdateWidget(HomeScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // Update controller when selectedIndex changes from outside
+    if (oldWidget.selectedIndex != widget.selectedIndex) {
+      // Use addPostFrameCallback to avoid calling setState during build
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          // Set flag to prevent listener from triggering navigation
+          _isProgrammaticChange = true;
+          _controller.selectIndex(widget.selectedIndex);
+          // Reset flag after a brief delay to allow listener to complete
+          Future.microtask(() => _isProgrammaticChange = false);
+        }
+      });
+    }
+  }
+
+  @override
   void dispose() {
     _controller.dispose();
     super.dispose();
@@ -77,14 +102,6 @@ class _HomeScreenState extends State<HomeScreen> {
 
   bool _isMobile(BuildContext context) {
     return MediaQuery.of(context).size.width < 600;
-  }
-
-  void _onItemSelected(int index) {
-    _controller.selectIndex(index);
-    // Close drawer only on mobile
-    if (_isMobile(context) && _key.currentState?.isDrawerOpen == true) {
-      Navigator.of(context).pop();
-    }
   }
 
   String _getPageTitle(int index) {
@@ -105,6 +122,8 @@ class _HomeScreenState extends State<HomeScreen> {
         return 'Sales Reports';
       case 7:
         return 'IPV Report';
+      case 8:
+        return 'Audit History';
       default:
         return 'Lucio Sales';
     }
@@ -317,6 +336,10 @@ class _HomeScreenState extends State<HomeScreen> {
             label: 'IPV Report',
           ),
           SidebarXItem(
+            icon: Icons.history,
+            label: 'Audit History',
+          ),
+          SidebarXItem(
             icon: Icons.logout,
             label: 'Logout',
           ),
@@ -326,66 +349,32 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildBody() {
     return BlocListener<SyncBloc, SyncState>(
-        listener: (context, state) {
-          if (state is SyncSuccess) {
-            // After successful sync, load data in all blocs
-            context.read<MeasurementUnitBloc>().add(LoadMeasurementUnits());
-            context.read<OutputTypeBloc>().add(LoadOutputTypes());
-            context.read<ProductBloc>().add(const LoadProducts());
-            context.read<ProductEntryBloc>().add(LoadProductEntries());
-            context.read<OutputBloc>().add(LoadOutputs());
+      listener: (context, state) {
+        if (state is SyncSuccess) {
+          // After successful sync, load data in all blocs
+          context.read<MeasurementUnitBloc>().add(LoadMeasurementUnits());
+          context.read<OutputTypeBloc>().add(LoadOutputTypes());
+          context.read<ProductBloc>().add(const LoadProducts());
+          context.read<ProductEntryBloc>().add(LoadProductEntries());
+          context.read<OutputBloc>().add(LoadOutputs());
 
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(state.message),
-                backgroundColor: Colors.green,
-              ),
-            );
-          } else if (state is SyncFailure) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(state.message),
-                backgroundColor: Colors.red,
-              ),
-            );
-          }
-        },
-        child: AnimatedBuilder(
-          animation: _controller,
-          builder: (context, child) {
-            return _getScreenForIndex(_controller.selectedIndex);
-          },
-        ),
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(state.message),
+              backgroundColor: Colors.green,
+            ),
+          );
+        } else if (state is SyncFailure) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(state.message),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      },
+      child: _controller.selectedIndex == 9 ? _buildLogoutScreen() : widget.child,
     );
-  }
-
-  Widget _getScreenForIndex(int index) {
-    switch (index) {
-      case 0:
-        return _buildHomeContent();
-      case 1:
-        return const MeasurementUnitListScreen();
-      case 2:
-        return const ProductListScreen();
-      case 3:
-        return ProductEntryListScreen(key: productEntryListKey);
-      case 4:
-        return const OutputTypeListScreen();
-      case 5:
-        return const OutputListScreen();
-      case 6:
-        return const SalesReportsScreen();
-      case 7:
-        return const IpvReportScreen();
-      case 8:
-        return _buildLogoutScreen();
-      default:
-        return _buildHomeContent();
-    }
-  }
-
-  Widget _buildHomeContent() {
-    return HomeContent(onNavigate: _onItemSelected);
   }
 
   Widget _buildLogoutScreen() {
@@ -447,10 +436,7 @@ class _HomeScreenState extends State<HomeScreen> {
               if (confirm == true && mounted) {
                 await authService.signOut();
                 if (mounted) {
-                  Navigator.of(context).pushAndRemoveUntil(
-                    MaterialPageRoute(builder: (context) => const LoginScreen()),
-                    (route) => false,
-                  );
+                  context.go('/login');
                 }
               }
             },

@@ -9,6 +9,7 @@ import '../network/network_info.dart';
 import '../services/auth_service.dart';
 import '../theme/theme_service.dart';
 import '../services/statistics_service.dart';
+import '../services/audit_service.dart';
 import '../../data/datasources/local/measurement_unit_local_datasource.dart';
 import '../../data/datasources/remote/measurement_unit_remote_datasource.dart';
 import '../../data/datasources/local/output_type_local_datasource.dart';
@@ -19,16 +20,20 @@ import '../../data/datasources/local/output_local_datasource.dart';
 import '../../data/datasources/remote/output_remote_datasource.dart';
 import '../../data/datasources/local/product_entry_local_datasource.dart';
 import '../../data/datasources/remote/product_entry_remote_datasource.dart';
+import '../../data/datasources/local/user_history_local_datasource.dart';
+import '../../data/datasources/remote/user_history_remote_datasource.dart';
 import '../../data/repositories/measurement_unit_repository_impl.dart';
 import '../../data/repositories/output_type_repository_impl.dart';
 import '../../data/repositories/product_repository_impl.dart';
 import '../../data/repositories/output_repository_impl.dart';
 import '../../data/repositories/product_entry_repository_impl.dart';
+import '../../data/repositories/user_history_repository_impl.dart';
 import '../../domain/repositories/measurement_unit_repository.dart';
 import '../../domain/repositories/output_type_repository.dart';
 import '../../domain/repositories/product_repository.dart';
 import '../../domain/repositories/output_repository.dart';
 import '../../domain/repositories/product_entry_repository.dart';
+import '../../domain/repositories/user_history_repository.dart';
 import '../../presentation/blocs/measurement_unit/measurement_unit_bloc.dart';
 import '../../presentation/blocs/output_type/output_type_bloc.dart';
 import '../../presentation/blocs/product/product_bloc.dart';
@@ -57,7 +62,9 @@ Future<void> init() async {
         measurementUnitRepository: sl(),
         outputTypeRepository: sl(),
         productRepository: sl(),
+        productEntryRepository: sl(),
         outputRepository: sl(),
+        userHistoryRepository: sl(),
         networkInfo: sl(),
       ));
   sl.registerLazySingleton(() => ThemeBloc(themeService: sl()));
@@ -101,6 +108,13 @@ Future<void> init() async {
       authService: sl(),
     ),
   );
+  sl.registerLazySingleton<UserHistoryRepository>(
+    () => UserHistoryRepositoryImpl(
+      remoteDataSource: sl(),
+      localDataSource: sl(),
+      networkInfo: sl(),
+    ),
+  );
 
   // Data sources - Remote
   sl.registerLazySingleton<MeasurementUnitRemoteDataSource>(
@@ -118,6 +132,9 @@ Future<void> init() async {
   sl.registerLazySingleton<ProductEntryRemoteDataSource>(
     () => ProductEntryRemoteDataSourceImpl(sl()),
   );
+  sl.registerLazySingleton<UserHistoryRemoteDataSource>(
+    () => UserHistoryRemoteDataSourceImpl(client: sl()),
+  );
 
   // Data sources - Local
   sl.registerLazySingleton<MeasurementUnitLocalDataSource>(
@@ -134,6 +151,9 @@ Future<void> init() async {
   );
   sl.registerLazySingleton<ProductEntryLocalDataSource>(
     () => ProductEntryLocalDataSourceImpl(sl()),
+  );
+  sl.registerLazySingleton<UserHistoryLocalDataSource>(
+    () => UserHistoryLocalDataSourceImpl(database: sl()),
   );
 
   // Initialize Supabase FIRST - before any services that depend on it
@@ -164,5 +184,9 @@ Future<void> init() async {
         outputDataSource: sl(),
         productDataSource: sl(),
         outputTypeDataSource: sl(),
+      ));
+  sl.registerLazySingleton(() => AuditService(
+        database: sl(),
+        repository: sl(),
       ));
 }

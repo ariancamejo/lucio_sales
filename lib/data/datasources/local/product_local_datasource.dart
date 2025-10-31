@@ -2,6 +2,7 @@ import 'package:drift/drift.dart';
 import '../../../core/database/app_database.dart';
 import '../../../domain/entities/product.dart' as entity;
 import '../../../domain/models/paginated_result.dart';
+import '../../../core/services/audit_service.dart';
 
 abstract class ProductLocalDataSource {
   Future<List<entity.Product>> getAll({bool includeInactive = false});
@@ -25,8 +26,11 @@ abstract class ProductLocalDataSource {
 
 class ProductLocalDataSourceImpl implements ProductLocalDataSource {
   final AppDatabase database;
+  late final AuditService auditService;
 
-  ProductLocalDataSourceImpl({required this.database});
+  ProductLocalDataSourceImpl({required this.database}) {
+    auditService = AuditService(database: database);
+  }
 
   @override
   Future<List<entity.Product>> getAll({bool includeInactive = false}) async {
@@ -50,6 +54,7 @@ class ProductLocalDataSourceImpl implements ProductLocalDataSource {
               active: item.active,
               createdAt: item.createdAt,
               updatedAt: item.updatedAt,
+              synced: item.synced,
             ))
         .toList();
   }
@@ -87,6 +92,7 @@ class ProductLocalDataSourceImpl implements ProductLocalDataSource {
               active: item.active,
               createdAt: item.createdAt,
               updatedAt: item.updatedAt,
+              synced: item.synced,
             ))
         .toList();
 
@@ -131,6 +137,7 @@ class ProductLocalDataSourceImpl implements ProductLocalDataSource {
       active: item.active,
       createdAt: item.createdAt,
       updatedAt: item.updatedAt,
+      synced: item.synced,
     );
   }
 
@@ -154,6 +161,7 @@ class ProductLocalDataSourceImpl implements ProductLocalDataSource {
       active: item.active,
       createdAt: item.createdAt,
       updatedAt: item.updatedAt,
+      synced: item.synced,
     );
   }
 
@@ -172,25 +180,72 @@ class ProductLocalDataSourceImpl implements ProductLocalDataSource {
             active: Value(product.active),
           ),
         );
+
+    // Log creation
+    await auditService.logCreate(
+      userId: product.userId,
+      entityType: 'product',
+      entityId: product.id,
+      newValues: {
+        'name': product.name,
+        'code': product.code,
+        'quantity': product.quantity,
+        'cost': product.cost,
+        'price': product.price,
+        'measurementUnitId': product.measurementUnitId,
+        'active': product.active,
+      },
+    );
   }
 
   @override
   Future<void> update(entity.Product product) async {
+    // Get old values for audit
+    final oldProduct = await getById(product.id);
+
     await (database.update(database.products)
           ..where((tbl) => tbl.id.equals(product.id)))
         .write(
-      ProductsCompanion.insert(
-        id: product.id,
-        userId: product.userId,
-        name: product.name,
-        quantity: product.quantity,
-        code: product.code,
-        cost: product.cost,
-        measurementUnitId: product.measurementUnitId,
-        price: product.price,
+      ProductsCompanion(
+        userId: Value(product.userId),
+        name: Value(product.name),
+        quantity: Value(product.quantity),
+        code: Value(product.code),
+        cost: Value(product.cost),
+        measurementUnitId: Value(product.measurementUnitId),
+        price: Value(product.price),
         active: Value(product.active),
+        updatedAt: Value(product.updatedAt),
+        synced: Value(product.synced),
       ),
     );
+
+    // Log update
+    if (oldProduct != null) {
+      await auditService.logUpdate(
+        userId: product.userId,
+        entityType: 'product',
+        entityId: product.id,
+        oldValues: {
+          'name': oldProduct.name,
+          'code': oldProduct.code,
+          'quantity': oldProduct.quantity,
+          'cost': oldProduct.cost,
+          'price': oldProduct.price,
+          'measurementUnitId': oldProduct.measurementUnitId,
+          'active': oldProduct.active,
+        },
+        newValues: {
+          'name': product.name,
+          'code': product.code,
+          'quantity': product.quantity,
+          'cost': product.cost,
+          'price': product.price,
+          'measurementUnitId': product.measurementUnitId,
+          'active': product.active,
+        },
+      );
+    }
   }
 
   @override
@@ -208,6 +263,7 @@ class ProductLocalDataSourceImpl implements ProductLocalDataSource {
         active: Value(product.active),
         createdAt: Value(product.createdAt),
         updatedAt: Value(product.updatedAt),
+        synced: Value(product.synced),
       ),
     );
   }
@@ -229,6 +285,7 @@ class ProductLocalDataSourceImpl implements ProductLocalDataSource {
             active: Value(product.active),
             createdAt: Value(product.createdAt),
             updatedAt: Value(product.updatedAt),
+            synced: Value(product.synced),
           ),
         );
       }
@@ -237,9 +294,30 @@ class ProductLocalDataSourceImpl implements ProductLocalDataSource {
 
   @override
   Future<void> delete(String id) async {
+    // Get product for audit before deletion
+    final product = await getById(id);
+
     await (database.delete(database.products)
           ..where((tbl) => tbl.id.equals(id)))
         .go();
+
+    // Log deletion
+    if (product != null) {
+      await auditService.logDelete(
+        userId: product.userId,
+        entityType: 'product',
+        entityId: id,
+        oldValues: {
+          'name': product.name,
+          'code': product.code,
+          'quantity': product.quantity,
+          'cost': product.cost,
+          'price': product.price,
+          'measurementUnitId': product.measurementUnitId,
+          'active': product.active,
+        },
+      );
+    }
   }
 
   @override
@@ -266,6 +344,7 @@ class ProductLocalDataSourceImpl implements ProductLocalDataSource {
               active: item.active,
               createdAt: item.createdAt,
               updatedAt: item.updatedAt,
+              synced: item.synced,
             ))
         .toList();
   }

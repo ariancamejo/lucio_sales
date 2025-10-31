@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
+import 'package:go_router/go_router.dart';
 import '../../../core/di/injection_container.dart';
 import '../../../core/services/auth_service.dart';
 import '../../../core/utils/error_messages.dart';
-import '../home/home_screen.dart';
+import '../../../resources/app_images.dart';
 import 'signup_screen.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -39,9 +41,8 @@ class _LoginScreenState extends State<LoginScreen> {
       );
 
       if (user != null && mounted) {
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (context) => const HomeScreen()),
-        );
+        // go_router will automatically redirect to /home based on auth state
+        context.go('/home');
       } else if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -94,34 +95,125 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: SafeArea(
-        child: Center(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(24.0),
+      body: LayoutBuilder(
+        builder: (context, constraints) {
+          final isDesktop = constraints.maxWidth >= 900;
+          final isTablet = constraints.maxWidth >= 600 && constraints.maxWidth < 900;
+
+          if (isDesktop || isTablet) {
+            // Split screen layout for tablet and desktop
+            return Row(
+              children: [
+                // Left side - Branding
+                Expanded(
+                  flex: isDesktop ? 5 : 4,
+                  child: Container(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [
+                          Theme.of(context).colorScheme.primary,
+                          Theme.of(context).colorScheme.secondary,
+                        ],
+                      ),
+                    ),
+                    child: Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          SvgPicture.asset(
+                            AppImages.logo,
+                            width: isDesktop ? 200 : 150,
+                            height: isDesktop ? 200 : 150,
+                          ),
+                          const SizedBox(height: 32),
+                          Text(
+                            'Lucio Sales',
+                            style: Theme.of(context).textTheme.displaySmall?.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white,
+                                ),
+                          ),
+                          const SizedBox(height: 16),
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 48),
+                            child: Text(
+                              'Manage your inventory with ease',
+                              textAlign: TextAlign.center,
+                              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                    color: Colors.white.withValues(alpha: 0.9),
+                                  ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+                // Right side - Login Form
+                Expanded(
+                  flex: isDesktop ? 5 : 6,
+                  child: _buildLoginForm(context, maxWidth: 450),
+                ),
+              ],
+            );
+          } else {
+            // Mobile layout - single column
+            return _buildLoginForm(context);
+          }
+        },
+      ),
+    );
+  }
+
+  Widget _buildLoginForm(BuildContext context, {double? maxWidth}) {
+    return SafeArea(
+      child: Center(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(24.0),
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              maxWidth: maxWidth ?? double.infinity,
+            ),
             child: Form(
               key: _formKey,
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Icon(
-                    Icons.inventory_2,
-                    size: 80,
-                    color: Theme.of(context).colorScheme.primary,
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    'Lucio Sales',
-                    textAlign: TextAlign.center,
-                    style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                          fontWeight: FontWeight.bold,
-                        ),
-                  ),
-                  const SizedBox(height: 8),
+                  // Show logo only on mobile
+                  if (maxWidth == null) ...[
+                    Center(
+                      child: SvgPicture.asset(
+                        AppImages.logo,
+                        width: 120,
+                        height: 120,
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                    Text(
+                      'Lucio Sales',
+                      textAlign: TextAlign.center,
+                      style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                            fontWeight: FontWeight.bold,
+                          ),
+                    ),
+                    const SizedBox(height: 8),
+                  ],
+                  if (maxWidth != null) ...[
+                    Text(
+                      'Welcome back',
+                      style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                            fontWeight: FontWeight.bold,
+                          ),
+                    ),
+                    const SizedBox(height: 8),
+                  ],
                   Text(
                     'Sign in to continue',
-                    textAlign: TextAlign.center,
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    textAlign: maxWidth == null ? TextAlign.center : TextAlign.left,
+                    style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                           color: Colors.grey[600],
                         ),
                   ),

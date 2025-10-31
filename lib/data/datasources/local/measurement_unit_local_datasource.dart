@@ -2,6 +2,7 @@ import 'package:drift/drift.dart';
 import '../../../core/database/app_database.dart';
 import '../../../domain/entities/measurement_unit.dart' as entity;
 import '../../../domain/models/paginated_result.dart';
+import '../../../core/services/audit_service.dart';
 
 abstract class MeasurementUnitLocalDataSource {
   Future<List<entity.MeasurementUnit>> getAll({String? userId});
@@ -24,8 +25,11 @@ abstract class MeasurementUnitLocalDataSource {
 
 class MeasurementUnitLocalDataSourceImpl implements MeasurementUnitLocalDataSource {
   final AppDatabase database;
+  late final AuditService auditService;
 
-  MeasurementUnitLocalDataSourceImpl({required this.database});
+  MeasurementUnitLocalDataSourceImpl({required this.database}) {
+    auditService = AuditService(database: database);
+  }
 
   @override
   Future<List<entity.MeasurementUnit>> getAll({String? userId}) async {
@@ -44,6 +48,7 @@ class MeasurementUnitLocalDataSourceImpl implements MeasurementUnitLocalDataSour
               acronym: item.acronym,
               createdAt: item.createdAt,
               updatedAt: item.updatedAt,
+              synced: item.synced,
             ))
         .toList();
   }
@@ -76,6 +81,7 @@ class MeasurementUnitLocalDataSourceImpl implements MeasurementUnitLocalDataSour
               acronym: item.acronym,
               createdAt: item.createdAt,
               updatedAt: item.updatedAt,
+              synced: item.synced,
             ))
         .toList();
 
@@ -115,6 +121,7 @@ class MeasurementUnitLocalDataSourceImpl implements MeasurementUnitLocalDataSour
       acronym: item.acronym,
       createdAt: item.createdAt,
       updatedAt: item.updatedAt,
+      synced: item.synced,
     );
   }
 
@@ -128,20 +135,52 @@ class MeasurementUnitLocalDataSourceImpl implements MeasurementUnitLocalDataSour
             acronym: measurementUnit.acronym,
           ),
         );
+
+    // Log creation
+    await auditService.logCreate(
+      userId: measurementUnit.userId,
+      entityType: 'measurement_unit',
+      entityId: measurementUnit.id,
+      newValues: {
+        'name': measurementUnit.name,
+        'acronym': measurementUnit.acronym,
+      },
+    );
   }
 
   @override
   Future<void> update(entity.MeasurementUnit measurementUnit) async {
+    // Get old values for audit
+    final oldUnit = await getById(measurementUnit.id);
+
     await (database.update(database.measurementUnits)
           ..where((tbl) => tbl.id.equals(measurementUnit.id)))
         .write(
-      MeasurementUnitsCompanion.insert(
-        id: measurementUnit.id,
-        userId: measurementUnit.userId,
-        name: measurementUnit.name,
-        acronym: measurementUnit.acronym,
+      MeasurementUnitsCompanion(
+        userId: Value(measurementUnit.userId),
+        name: Value(measurementUnit.name),
+        acronym: Value(measurementUnit.acronym),
+        updatedAt: Value(measurementUnit.updatedAt),
+        synced: Value(measurementUnit.synced),
       ),
     );
+
+    // Log update
+    if (oldUnit != null) {
+      await auditService.logUpdate(
+        userId: measurementUnit.userId,
+        entityType: 'measurement_unit',
+        entityId: measurementUnit.id,
+        oldValues: {
+          'name': oldUnit.name,
+          'acronym': oldUnit.acronym,
+        },
+        newValues: {
+          'name': measurementUnit.name,
+          'acronym': measurementUnit.acronym,
+        },
+      );
+    }
   }
 
   @override
@@ -154,6 +193,7 @@ class MeasurementUnitLocalDataSourceImpl implements MeasurementUnitLocalDataSour
         acronym: measurementUnit.acronym,
         createdAt: Value(measurementUnit.createdAt),
         updatedAt: Value(measurementUnit.updatedAt),
+        synced: Value(measurementUnit.synced),
       ),
     );
   }
@@ -170,6 +210,7 @@ class MeasurementUnitLocalDataSourceImpl implements MeasurementUnitLocalDataSour
             acronym: unit.acronym,
             createdAt: Value(unit.createdAt),
             updatedAt: Value(unit.updatedAt),
+            synced: Value(unit.synced),
           ),
         );
       }
@@ -178,9 +219,25 @@ class MeasurementUnitLocalDataSourceImpl implements MeasurementUnitLocalDataSour
 
   @override
   Future<void> delete(String id) async {
+    // Get unit for audit before deletion
+    final unit = await getById(id);
+
     await (database.delete(database.measurementUnits)
           ..where((tbl) => tbl.id.equals(id)))
         .go();
+
+    // Log deletion
+    if (unit != null) {
+      await auditService.logDelete(
+        userId: unit.userId,
+        entityType: 'measurement_unit',
+        entityId: id,
+        oldValues: {
+          'name': unit.name,
+          'acronym': unit.acronym,
+        },
+      );
+    }
   }
 
   @override
@@ -202,6 +259,7 @@ class MeasurementUnitLocalDataSourceImpl implements MeasurementUnitLocalDataSour
               acronym: item.acronym,
               createdAt: item.createdAt,
               updatedAt: item.updatedAt,
+              synced: item.synced,
             ))
         .toList();
   }

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import '../../blocs/output/output_bloc.dart';
 import '../../blocs/output/output_event.dart';
@@ -7,8 +8,9 @@ import '../../blocs/output/output_state.dart';
 import '../../blocs/output_type/output_type_bloc.dart';
 import '../../blocs/output_type/output_type_event.dart';
 import '../../blocs/output_type/output_type_state.dart';
+import '../../blocs/sync/sync_bloc.dart';
+import '../../blocs/sync/sync_event.dart';
 
-import 'output_form_screen.dart';
 import 'output_search_delegate.dart';
 
 class OutputListScreen extends StatefulWidget {
@@ -326,11 +328,7 @@ class _OutputListScreenState extends State<OutputListScreen> {
           FloatingActionButton(
             heroTag: 'add',
             onPressed: () {
-              Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (context) => const OutputFormScreen(),
-                ),
-              );
+              context.push('/outputs/new');
             },
             child: const Icon(Icons.add),
           ),
@@ -345,8 +343,6 @@ class _OutputListScreenState extends State<OutputListScreen> {
                 backgroundColor: Colors.red,
               ),
             );
-            // Reload list to ensure UI reflects actual database state
-            _loadPage(_currentPage);
           } else if (state is OutputOperationSuccess) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
@@ -354,7 +350,13 @@ class _OutputListScreenState extends State<OutputListScreen> {
                 backgroundColor: Colors.green,
               ),
             );
-            _loadPage(_currentPage);
+          } else if (state is OutputPaginatedLoaded) {
+            // Sync local page state with bloc state
+            if (_currentPage != state.currentPage) {
+              setState(() {
+                _currentPage = state.currentPage;
+              });
+            }
           }
         },
         builder: (context, state) {
@@ -417,13 +419,7 @@ class _OutputListScreenState extends State<OutputListScreen> {
                                 );
                               } else if (direction == DismissDirection.startToEnd) {
                                 // Swipe right to edit
-                                Navigator.of(context).push(
-                                  MaterialPageRoute(
-                                    builder: (context) => OutputFormScreen(
-                                      output: output,
-                                    ),
-                                  ),
-                                );
+                                context.push('/outputs/${output.id}/edit');
                                 return false;
                               }
                               return false;
@@ -480,13 +476,7 @@ class _OutputListScreenState extends State<OutputListScreen> {
                               elevation: 2,
                               child: InkWell(
                                 onTap: () {
-                                  Navigator.of(context).push(
-                                    MaterialPageRoute(
-                                      builder: (context) => OutputFormScreen(
-                                        output: output,
-                                      ),
-                                    ),
-                                  );
+                                  context.push('/outputs/${output.id}/edit');
                                 },
                                 child: Padding(
                                   padding: const EdgeInsets.all(12),
@@ -496,13 +486,41 @@ class _OutputListScreenState extends State<OutputListScreen> {
                                         child: Column(
                                           crossAxisAlignment: CrossAxisAlignment.start,
                                           children: [
-                                            Text(
-                                              output.product?.name ?? 'Unknown Product',
-                                              style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                                                    fontWeight: FontWeight.bold,
+                                            Row(
+                                              children: [
+                                                Expanded(
+                                                  child: Text(
+                                                    output.product?.name ?? 'Unknown Product',
+                                                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                                                          fontWeight: FontWeight.bold,
+                                                        ),
+                                                    maxLines: 1,
+                                                    overflow: TextOverflow.ellipsis,
                                                   ),
-                                              maxLines: 1,
-                                              overflow: TextOverflow.ellipsis,
+                                                ),
+                                                if (!output.synced)
+                                                  Tooltip(
+                                                    message: 'Not synced - Tap to sync',
+                                                    child: InkWell(
+                                                      onTap: () {
+                                                        context.read<SyncBloc>().add(StartSync());
+                                                      },
+                                                      child: Container(
+                                                        margin: const EdgeInsets.only(left: 6),
+                                                        padding: const EdgeInsets.all(4),
+                                                        decoration: BoxDecoration(
+                                                          color: Colors.orange.withValues(alpha: 0.1),
+                                                          shape: BoxShape.circle,
+                                                        ),
+                                                        child: const Icon(
+                                                          Icons.cloud_off,
+                                                          size: 14,
+                                                          color: Colors.orange,
+                                                        ),
+                                                      ),
+                                                    ),
+                                                  ),
+                                              ],
                                             ),
                                             const SizedBox(height: 4),
                                             Row(

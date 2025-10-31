@@ -1,9 +1,6 @@
-import 'dart:io';
 import 'package:drift/drift.dart';
-import 'package:drift/native.dart';
-import 'package:path_provider/path_provider.dart';
-import 'package:path/path.dart' as p;
 import '../constants/app_constants.dart';
+import 'connection/connection.dart' as impl;
 
 part 'app_database.g.dart';
 
@@ -83,15 +80,32 @@ class ProductEntries extends Table {
   Set<Column> get primaryKey => {id};
 }
 
+class UserHistory extends Table {
+  TextColumn get id => text()();
+  TextColumn get userId => text()();
+  TextColumn get entityType => text()(); // 'product', 'output', 'measurement_unit', etc.
+  TextColumn get entityId => text()();
+  TextColumn get action => text()(); // 'create', 'update', 'delete'
+  TextColumn get changes => text().nullable()(); // JSON string with changes
+  TextColumn get oldValues => text().nullable()(); // JSON string with old values
+  TextColumn get newValues => text().nullable()(); // JSON string with new values
+  DateTimeColumn get timestamp => dateTime().withDefault(currentDateAndTime)();
+  BoolColumn get synced => boolean().withDefault(const Constant(false))();
+
+  @override
+  Set<Column> get primaryKey => {id};
+}
+
 @DriftDatabase(tables: [
   MeasurementUnits,
   OutputTypes,
   Products,
   Outputs,
   ProductEntries,
+  UserHistory,
 ])
 class AppDatabase extends _$AppDatabase {
-  AppDatabase() : super(_openConnection());
+  AppDatabase() : super(impl.connect());
 
   @override
   int get schemaVersion => AppConstants.databaseVersion;
@@ -114,15 +128,11 @@ class AppDatabase extends _$AppDatabase {
           // Create product_entries table
           await m.createTable(productEntries);
         }
+        if (from < 4) {
+          // Create user_history table for audit trail
+          await m.createTable(userHistory);
+        }
       },
     );
   }
-}
-
-LazyDatabase _openConnection() {
-  return LazyDatabase(() async {
-    final dbFolder = await getApplicationDocumentsDirectory();
-    final file = File(p.join(dbFolder.path, AppConstants.databaseName));
-    return NativeDatabase(file);
-  });
 }

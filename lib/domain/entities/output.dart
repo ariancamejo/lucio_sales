@@ -19,6 +19,7 @@ class Output with _$Output {
     required DateTime date,
     required DateTime createdAt,
     required DateTime updatedAt,
+    @Default(false) bool synced,
     Product? product,
     MeasurementUnit? measurementUnit,
     OutputType? outputType,

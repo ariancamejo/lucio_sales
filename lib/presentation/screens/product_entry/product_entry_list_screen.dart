@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import '../../../domain/entities/product.dart';
 import '../../blocs/product/product_bloc.dart';
@@ -8,12 +9,23 @@ import '../../blocs/product/product_state.dart';
 import '../../blocs/product_entry/product_entry_bloc.dart';
 import '../../blocs/product_entry/product_entry_event.dart';
 import '../../blocs/product_entry/product_entry_state.dart';
+import '../../blocs/sync/sync_bloc.dart';
+import '../../blocs/sync/sync_event.dart';
 
-import 'product_entry_form_screen.dart';
 import 'product_entry_search_delegate.dart';
 
 class ProductEntryListScreen extends StatefulWidget {
-  const ProductEntryListScreen({super.key});
+  /// Initial product ID filter (from query parameters or navigation)
+  final String? initialProductIdFilter;
+
+  /// Initial product name for display (from query parameters or navigation)
+  final String? initialProductName;
+
+  const ProductEntryListScreen({
+    super.key,
+    this.initialProductIdFilter,
+    this.initialProductName,
+  });
 
   @override
   State<ProductEntryListScreen> createState() => _ProductEntryListScreenState();
@@ -36,7 +48,19 @@ class _ProductEntryListScreenState extends State<ProductEntryListScreen> {
   @override
   void initState() {
     super.initState();
-    _loadPage(_currentPage);
+
+    // Initialize filters from widget parameters
+    if (widget.initialProductIdFilter != null && widget.initialProductName != null) {
+      _productIdFilter = widget.initialProductIdFilter;
+      _productName = widget.initialProductName;
+    }
+
+    // Load data with initial filters
+    if (_productIdFilter != null) {
+      _applyFilters();
+    } else {
+      _loadPage(_currentPage);
+    }
   }
 
   // Método público para aplicar filtro de producto desde fuera
@@ -339,11 +363,7 @@ class _ProductEntryListScreenState extends State<ProductEntryListScreen> {
           FloatingActionButton(
             heroTag: 'add',
             onPressed: () {
-              Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (context) => const ProductEntryFormScreen(),
-                ),
-              );
+              context.push('/stock-entries/new');
             },
             child: const Icon(Icons.add),
           ),
@@ -358,7 +378,6 @@ class _ProductEntryListScreenState extends State<ProductEntryListScreen> {
                 backgroundColor: Colors.red,
               ),
             );
-            _loadPage(_currentPage);
           } else if (state is ProductEntryOperationSuccess) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
@@ -366,7 +385,13 @@ class _ProductEntryListScreenState extends State<ProductEntryListScreen> {
                 backgroundColor: Colors.green,
               ),
             );
-            _loadPage(_currentPage);
+          } else if (state is ProductEntryPaginatedLoaded) {
+            // Sync local page state with bloc state
+            if (_currentPage != state.currentPage) {
+              setState(() {
+                _currentPage = state.currentPage;
+              });
+            }
           }
         },
         builder: (context, state) {
@@ -471,13 +496,7 @@ class _ProductEntryListScreenState extends State<ProductEntryListScreen> {
                                 );
                               } else if (direction == DismissDirection.startToEnd) {
                                 // Swipe right to edit
-                                Navigator.of(context).push(
-                                  MaterialPageRoute(
-                                    builder: (context) => ProductEntryFormScreen(
-                                      productEntry: entry,
-                                    ),
-                                  ),
-                                );
+                                context.push('/stock-entries/${entry.id}/edit');
                                 return false;
                               }
                               return false;
@@ -534,13 +553,7 @@ class _ProductEntryListScreenState extends State<ProductEntryListScreen> {
                               elevation: 2,
                               child: InkWell(
                                 onTap: () {
-                                  Navigator.of(context).push(
-                                    MaterialPageRoute(
-                                      builder: (context) => ProductEntryFormScreen(
-                                        productEntry: entry,
-                                      ),
-                                    ),
-                                  );
+                                  context.push('/stock-entries/${entry.id}/edit');
                                 },
                                 child: Padding(
                                   padding: const EdgeInsets.all(12),
@@ -611,6 +624,28 @@ class _ProductEntryListScreenState extends State<ProductEntryListScreen> {
                                           ],
                                         ),
                                       ),
+                                      if (!entry.synced)
+                                        Tooltip(
+                                          message: 'Not synced - Tap to sync',
+                                          child: InkWell(
+                                            onTap: () {
+                                              context.read<SyncBloc>().add(StartSync());
+                                            },
+                                            child: Container(
+                                              margin: const EdgeInsets.only(left: 6),
+                                              padding: const EdgeInsets.all(4),
+                                              decoration: BoxDecoration(
+                                                color: Colors.orange.withValues(alpha: 0.1),
+                                                shape: BoxShape.circle,
+                                              ),
+                                              child: const Icon(
+                                                Icons.cloud_off,
+                                                size: 14,
+                                                color: Colors.orange,
+                                              ),
+                                            ),
+                                          ),
+                                        ),
                                       Icon(Icons.chevron_right, color: Colors.grey[400], size: 20),
                                     ],
                                   ),

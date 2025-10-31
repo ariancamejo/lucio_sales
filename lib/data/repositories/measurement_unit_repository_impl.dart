@@ -30,11 +30,23 @@ class MeasurementUnitRepositoryImpl implements MeasurementUnitRepository {
 
       if (isConnected) {
         try {
+          // Get remote and local items
           final remoteItems = await remoteDataSource.getAll();
+          final localItems = await localDataSource.getAll(userId: userId);
+
+          // Upsert remote items (they come with synced=true)
           await localDataSource.upsertAll(remoteItems);
-          for (var item in remoteItems) {
-            await localDataSource.markAsSynced(item.id);
+
+          // Find local items that are NOT in remote and were previously synced
+          // Only delete items with synced=true that are no longer on server
+          // Keep items with synced=false (they're pending sync)
+          final remoteIds = remoteItems.map((item) => item.id).toSet();
+          for (var localItem in localItems) {
+            if (!remoteIds.contains(localItem.id) && localItem.synced) {
+              await localDataSource.delete(localItem.id);
+            }
           }
+
           return Right(remoteItems);
         } catch (e) {
           final localItems = await localDataSource.getAll(userId: userId);
@@ -61,10 +73,21 @@ class MeasurementUnitRepositoryImpl implements MeasurementUnitRepository {
       // Sync from server on first page when connected
       if (isConnected && page == 1) {
         try {
+          // Get remote and local items
           final remoteItems = await remoteDataSource.getAll();
+          final localItems = await localDataSource.getAll(userId: userId);
+
+          // Upsert remote items (they come with synced=true)
           await localDataSource.upsertAll(remoteItems);
-          for (var item in remoteItems) {
-            await localDataSource.markAsSynced(item.id);
+
+          // Find local items that are NOT in remote and were previously synced
+          // Only delete items with synced=true that are no longer on server
+          // Keep items with synced=false (they're pending sync)
+          final remoteIds = remoteItems.map((item) => item.id).toSet();
+          for (var localItem in localItems) {
+            if (!remoteIds.contains(localItem.id) && localItem.synced) {
+              await localDataSource.delete(localItem.id);
+            }
           }
         } catch (e) {
           // Continue with local data if sync fails
@@ -122,12 +145,16 @@ class MeasurementUnitRepositoryImpl implements MeasurementUnitRepository {
           await localDataSource.markAsSynced(remoteItem.id);
           return Right(remoteItem);
         } catch (e) {
-          await localDataSource.insert(newItem);
-          return Right(newItem);
+          // If remote create fails, mark as not synced
+          final unsyncedItem = newItem.copyWith(synced: false);
+          await localDataSource.insert(unsyncedItem);
+          return Right(unsyncedItem);
         }
       } else {
-        await localDataSource.insert(newItem);
-        return Right(newItem);
+        // If offline, mark as not synced
+        final unsyncedItem = newItem.copyWith(synced: false);
+        await localDataSource.insert(unsyncedItem);
+        return Right(unsyncedItem);
       }
     } catch (e) {
       return Left(ServerFailure(e.toString()));
@@ -150,12 +177,16 @@ class MeasurementUnitRepositoryImpl implements MeasurementUnitRepository {
           await localDataSource.markAsSynced(remoteItem.id);
           return Right(remoteItem);
         } catch (e) {
-          await localDataSource.update(updatedItem);
-          return Right(updatedItem);
+          // If remote update fails, mark as not synced
+          final unsyncedItem = updatedItem.copyWith(synced: false);
+          await localDataSource.update(unsyncedItem);
+          return Right(unsyncedItem);
         }
       } else {
-        await localDataSource.update(updatedItem);
-        return Right(updatedItem);
+        // If offline, mark as not synced
+        final unsyncedItem = updatedItem.copyWith(synced: false);
+        await localDataSource.update(unsyncedItem);
+        return Right(unsyncedItem);
       }
     } catch (e) {
       return Left(ServerFailure(e.toString()));

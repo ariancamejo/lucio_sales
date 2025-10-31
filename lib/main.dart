@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:responsive_framework/responsive_framework.dart';
 import 'core/di/injection_container.dart' as di;
 import 'core/theme/app_theme.dart';
+import 'core/routing/app_router.dart';
 import 'presentation/blocs/measurement_unit/measurement_unit_bloc.dart';
 import 'presentation/blocs/output_type/output_type_bloc.dart';
 import 'presentation/blocs/product/product_bloc.dart';
@@ -12,7 +13,6 @@ import 'presentation/blocs/sync/sync_bloc.dart';
 import 'presentation/blocs/theme/theme_bloc.dart';
 import 'presentation/blocs/theme/theme_event.dart';
 import 'presentation/blocs/theme/theme_state.dart';
-import 'presentation/screens/auth/auth_wrapper.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -39,12 +39,13 @@ class MyApp extends StatelessWidget {
       ],
       child: BlocBuilder<ThemeBloc, ThemeState>(
         builder: (context, state) {
-          return MaterialApp(
+          return MaterialApp.router(
             title: 'Lucio Sales',
             debugShowCheckedModeBanner: false,
             theme: AppTheme.lightTheme,
             darkTheme: AppTheme.darkTheme,
             themeMode: state.themeMode,
+            routerConfig: AppRouter.router,
             builder: (context, child) => ResponsiveBreakpoints.builder(
               child: child!,
               breakpoints: [
@@ -54,7 +55,6 @@ class MyApp extends StatelessWidget {
                 const Breakpoint(start: 1921, end: double.infinity, name: '4K'),
               ],
             ),
-            home: const AuthWrapper(),
           );
         },
       ),

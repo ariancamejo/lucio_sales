@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import '../../../core/utils/debouncer.dart';
 import '../../../domain/entities/output.dart';
 import '../../blocs/output/output_bloc.dart';
 import '../../blocs/output/output_event.dart';
 import '../../blocs/output/output_state.dart';
-import 'output_form_screen.dart';
 
 class OutputSearchDelegate extends SearchDelegate<Output?> {
   final _debouncer = Debouncer(duration: const Duration(milliseconds: 500));
@@ -122,13 +122,7 @@ class OutputSearchDelegate extends SearchDelegate<Output?> {
                   icon: const Icon(Icons.edit),
                   color: Colors.blue,
                   onPressed: () {
-                    Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (context) => OutputFormScreen(
-                          output: output,
-                        ),
-                      ),
-                    );
+                    context.push('/outputs/${output.id}/edit');
                   },
                 ),
                 onTap: () => close(context, output),
@@ -216,13 +210,7 @@ class OutputSearchDelegate extends SearchDelegate<Output?> {
                   icon: const Icon(Icons.edit),
                   color: Colors.blue,
                   onPressed: () {
-                    Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (context) => OutputFormScreen(
-                          output: output,
-                        ),
-                      ),
-                    );
+                    context.push('/outputs/${output.id}/edit');
                   },
                 ),
                 onTap: () => close(context, output),

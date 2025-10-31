@@ -29,6 +29,7 @@ class ProductRemoteDataSourceImpl implements ProductRemoteDataSource {
 
     return (response as List).map((json) {
       final product = Map<String, dynamic>.from(json);
+      product['synced'] = true; // Mark as synced since it's from server
       return Product.fromJson(product);
     }).toList();
   }
@@ -41,7 +42,9 @@ class ProductRemoteDataSourceImpl implements ProductRemoteDataSource {
         .eq('id', id)
         .single();
 
-    return Product.fromJson(response);
+    final product = Map<String, dynamic>.from(response);
+    product['synced'] = true; // Mark as synced since it's from server
+    return Product.fromJson(product);
   }
 
   @override
@@ -52,7 +55,9 @@ class ProductRemoteDataSourceImpl implements ProductRemoteDataSource {
         .eq('code', code)
         .single();
 
-    return Product.fromJson(response);
+    final product = Map<String, dynamic>.from(response);
+    product['synced'] = true; // Mark as synced since it's from server
+    return Product.fromJson(product);
   }
 
   @override
@@ -61,6 +66,7 @@ class ProductRemoteDataSourceImpl implements ProductRemoteDataSource {
     data.remove('created_at');
     data.remove('updated_at');
     data.remove('measurement_unit');
+    data.remove('synced'); // synced is a local-only field
 
     final response = await client
         .from('products')
@@ -68,7 +74,9 @@ class ProductRemoteDataSourceImpl implements ProductRemoteDataSource {
         .select('*, measurement_unit:measurement_units!inner(*)')
         .single();
 
-    return Product.fromJson(response);
+    final productData = Map<String, dynamic>.from(response);
+    productData['synced'] = true; // Mark as synced since it's from server
+    return Product.fromJson(productData);
   }
 
   @override
@@ -77,6 +85,7 @@ class ProductRemoteDataSourceImpl implements ProductRemoteDataSource {
     data.remove('created_at');
     data.remove('updated_at');
     data.remove('measurement_unit');
+    data.remove('synced'); // synced is a local-only field
 
     final response = await client
         .from('products')
@@ -85,7 +94,9 @@ class ProductRemoteDataSourceImpl implements ProductRemoteDataSource {
         .select('*, measurement_unit:measurement_units!inner(*)')
         .single();
 
-    return Product.fromJson(response);
+    final productData = Map<String, dynamic>.from(response);
+    productData['synced'] = true; // Mark as synced since it's from server
+    return Product.fromJson(productData);
   }
 
   @override

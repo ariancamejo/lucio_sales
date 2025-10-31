@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 import '../../blocs/output_type/output_type_bloc.dart';
 import '../../blocs/output_type/output_type_event.dart';
 import '../../blocs/output_type/output_type_state.dart';
-
-import 'output_type_form_screen.dart';
+import '../../blocs/sync/sync_bloc.dart';
+import '../../blocs/sync/sync_event.dart';
 
 class OutputTypeListScreen extends StatefulWidget {
   const OutputTypeListScreen({super.key});
@@ -34,11 +35,7 @@ class _OutputTypeListScreenState extends State<OutputTypeListScreen> {
     return Scaffold(
       floatingActionButton: FloatingActionButton(
         onPressed: () {
-          Navigator.of(context).push(
-            MaterialPageRoute(
-              builder: (context) => const OutputTypeFormScreen(),
-            ),
-          );
+          context.push('/output-types/new');
         },
         child: const Icon(Icons.add),
       ),
@@ -51,8 +48,6 @@ class _OutputTypeListScreenState extends State<OutputTypeListScreen> {
                 backgroundColor: Colors.red,
               ),
             );
-            // Reload list to ensure UI reflects actual database state
-            _loadPage(_currentPage);
           } else if (state is OutputTypeOperationSuccess) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
@@ -60,7 +55,13 @@ class _OutputTypeListScreenState extends State<OutputTypeListScreen> {
                 backgroundColor: Colors.green,
               ),
             );
-            _loadPage(_currentPage);
+          } else if (state is OutputTypePaginatedLoaded) {
+            // Sync local page state with bloc state
+            if (_currentPage != state.currentPage) {
+              setState(() {
+                _currentPage = state.currentPage;
+              });
+            }
           }
         },
         builder: (context, state) {
@@ -121,13 +122,7 @@ class _OutputTypeListScreenState extends State<OutputTypeListScreen> {
                                 );
                               } else if (direction == DismissDirection.startToEnd) {
                                 // Swipe right to edit
-                                Navigator.of(context).push(
-                                  MaterialPageRoute(
-                                    builder: (context) => OutputTypeFormScreen(
-                                      outputType: outputType,
-                                    ),
-                                  ),
-                                );
+                                context.push('/output-types/${outputType.id}/edit');
                                 return false;
                               }
                               return false;
@@ -184,13 +179,7 @@ class _OutputTypeListScreenState extends State<OutputTypeListScreen> {
                               elevation: 2,
                               child: InkWell(
                                 onTap: () {
-                                  Navigator.of(context).push(
-                                    MaterialPageRoute(
-                                      builder: (context) => OutputTypeFormScreen(
-                                        outputType: outputType,
-                                      ),
-                                    ),
-                                  );
+                                  context.push('/output-types/${outputType.id}/edit');
                                 },
                                 child: Padding(
                                   padding: const EdgeInsets.all(12),
@@ -216,6 +205,28 @@ class _OutputTypeListScreenState extends State<OutputTypeListScreen> {
                                           overflow: TextOverflow.ellipsis,
                                         ),
                                       ),
+                                      if (!outputType.synced)
+                                        Tooltip(
+                                          message: 'Not synced - Tap to sync',
+                                          child: InkWell(
+                                            onTap: () {
+                                              context.read<SyncBloc>().add(StartSync());
+                                            },
+                                            child: Container(
+                                              margin: const EdgeInsets.only(left: 6),
+                                              padding: const EdgeInsets.all(4),
+                                              decoration: BoxDecoration(
+                                                color: Colors.orange.withValues(alpha: 0.1),
+                                                shape: BoxShape.circle,
+                                              ),
+                                              child: const Icon(
+                                                Icons.cloud_off,
+                                                size: 14,
+                                                color: Colors.orange,
+                                              ),
+                                            ),
+                                          ),
+                                        ),
                                       Icon(Icons.chevron_right, color: Colors.grey[400], size: 20),
                                     ],
                                   ),

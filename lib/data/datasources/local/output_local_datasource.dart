@@ -5,6 +5,7 @@ import '../../../domain/entities/product.dart' as entity;
 import '../../../domain/entities/measurement_unit.dart' as entity;
 import '../../../domain/entities/output_type.dart' as entity;
 import '../../../domain/models/paginated_result.dart';
+import '../../../core/services/audit_service.dart';
 
 abstract class OutputLocalDataSource {
   Future<List<entity.Output>> getAll();
@@ -28,8 +29,11 @@ abstract class OutputLocalDataSource {
 
 class OutputLocalDataSourceImpl implements OutputLocalDataSource {
   final AppDatabase database;
+  late final AuditService auditService;
 
-  OutputLocalDataSourceImpl({required this.database});
+  OutputLocalDataSourceImpl({required this.database}) {
+    auditService = AuditService(database: database);
+  }
 
   @override
   Future<List<entity.Output>> getAll() async {
@@ -64,6 +68,7 @@ class OutputLocalDataSourceImpl implements OutputLocalDataSource {
         date: output.date,
         createdAt: output.createdAt,
         updatedAt: output.updatedAt,
+        synced: output.synced,
         product: product != null
             ? entity.Product(
                 id: product.id,
@@ -77,6 +82,7 @@ class OutputLocalDataSourceImpl implements OutputLocalDataSource {
                 active: product.active,
                 createdAt: product.createdAt,
                 updatedAt: product.updatedAt,
+                synced: product.synced,
               )
             : null,
         measurementUnit: measurementUnit != null
@@ -87,6 +93,7 @@ class OutputLocalDataSourceImpl implements OutputLocalDataSource {
                 acronym: measurementUnit.acronym,
                 createdAt: measurementUnit.createdAt,
                 updatedAt: measurementUnit.updatedAt,
+                synced: measurementUnit.synced,
               )
             : null,
         outputType: outputType != null
@@ -96,6 +103,7 @@ class OutputLocalDataSourceImpl implements OutputLocalDataSource {
                 name: outputType.name,
                 createdAt: outputType.createdAt,
                 updatedAt: outputType.updatedAt,
+                synced: outputType.synced,
               )
             : null,
       );
@@ -142,6 +150,7 @@ class OutputLocalDataSourceImpl implements OutputLocalDataSource {
         date: output.date,
         createdAt: output.createdAt,
         updatedAt: output.updatedAt,
+        synced: output.synced,
         product: product != null
             ? entity.Product(
                 id: product.id,
@@ -155,6 +164,7 @@ class OutputLocalDataSourceImpl implements OutputLocalDataSource {
                 active: product.active,
                 createdAt: product.createdAt,
                 updatedAt: product.updatedAt,
+                synced: product.synced,
               )
             : null,
         measurementUnit: measurementUnit != null
@@ -165,6 +175,7 @@ class OutputLocalDataSourceImpl implements OutputLocalDataSource {
                 acronym: measurementUnit.acronym,
                 createdAt: measurementUnit.createdAt,
                 updatedAt: measurementUnit.updatedAt,
+                synced: measurementUnit.synced,
               )
             : null,
         outputType: outputType != null
@@ -174,6 +185,7 @@ class OutputLocalDataSourceImpl implements OutputLocalDataSource {
                 name: outputType.name,
                 createdAt: outputType.createdAt,
                 updatedAt: outputType.updatedAt,
+                synced: outputType.synced,
               )
             : null,
       );
@@ -215,6 +227,7 @@ class OutputLocalDataSourceImpl implements OutputLocalDataSource {
       date: item.date,
       createdAt: item.createdAt,
       updatedAt: item.updatedAt,
+      synced: item.synced,
     );
   }
 
@@ -239,6 +252,7 @@ class OutputLocalDataSourceImpl implements OutputLocalDataSource {
               date: item.date,
               createdAt: item.createdAt,
               updatedAt: item.updatedAt,
+              synced: item.synced,
             ))
         .toList();
   }
@@ -262,42 +276,155 @@ class OutputLocalDataSourceImpl implements OutputLocalDataSource {
               date: item.date,
               createdAt: item.createdAt,
               updatedAt: item.updatedAt,
+              synced: item.synced,
             ))
         .toList();
   }
 
   @override
   Future<void> insert(entity.Output output) async {
-    await database.into(database.outputs).insert(
-          OutputsCompanion.insert(
-            id: output.id,
-            userId: output.userId,
-            productId: output.productId,
-            quantity: output.quantity,
-            measurementUnitId: output.measurementUnitId,
-            totalAmount: output.totalAmount,
-            outputTypeId: output.outputTypeId,
-            date: output.date,
-          ),
+    await database.transaction(() async {
+      // Insert the output
+      await database.into(database.outputs).insert(
+            OutputsCompanion.insert(
+              id: output.id,
+              userId: output.userId,
+              productId: output.productId,
+              quantity: output.quantity,
+              measurementUnitId: output.measurementUnitId,
+              totalAmount: output.totalAmount,
+              outputTypeId: output.outputTypeId,
+              date: output.date,
+            ),
+          );
+
+      // Log audit
+      await auditService.logCreate(
+        userId: output.userId,
+        entityType: 'output',
+        entityId: output.id,
+        newValues: {
+          'productId': output.productId,
+          'quantity': output.quantity,
+          'measurementUnitId': output.measurementUnitId,
+          'totalAmount': output.totalAmount,
+          'outputTypeId': output.outputTypeId,
+          'date': output.date.toIso8601String(),
+        },
+      );
+
+      // Update product quantity - decrease by output quantity
+      final product = await (database.select(database.products)
+            ..where((tbl) => tbl.id.equals(output.productId)))
+          .getSingleOrNull();
+
+      if (product != null) {
+        final oldQuantity = product.quantity;
+        final newQuantity = product.quantity - output.quantity;
+
+        await (database.update(database.products)
+              ..where((tbl) => tbl.id.equals(output.productId)))
+            .write(ProductsCompanion(
+          quantity: Value(newQuantity),
+          updatedAt: Value(DateTime.now()),
+          synced: const Value(false),
+        ));
+
+        // Log product quantity update
+        await auditService.logUpdate(
+          userId: output.userId,
+          entityType: 'product',
+          entityId: output.productId,
+          oldValues: {'quantity': oldQuantity},
+          newValues: {'quantity': newQuantity},
         );
+      }
+    });
   }
 
   @override
   Future<void> update(entity.Output output) async {
-    await (database.update(database.outputs)
-          ..where((tbl) => tbl.id.equals(output.id)))
-        .write(
-      OutputsCompanion.insert(
-        id: output.id,
-        userId: output.userId,
-        productId: output.productId,
-        quantity: output.quantity,
-        measurementUnitId: output.measurementUnitId,
-        totalAmount: output.totalAmount,
-        outputTypeId: output.outputTypeId,
-        date: output.date,
-      ),
-    );
+    await database.transaction(() async {
+      // Get the old output to calculate quantity difference
+      final oldOutput = await (database.select(database.outputs)
+            ..where((tbl) => tbl.id.equals(output.id)))
+          .getSingleOrNull();
+
+      if (oldOutput != null) {
+        final quantityDifference = output.quantity - oldOutput.quantity;
+
+        // Update the output
+        await (database.update(database.outputs)
+              ..where((tbl) => tbl.id.equals(output.id)))
+            .write(
+          OutputsCompanion(
+            userId: Value(output.userId),
+            productId: Value(output.productId),
+            quantity: Value(output.quantity),
+            measurementUnitId: Value(output.measurementUnitId),
+            totalAmount: Value(output.totalAmount),
+            outputTypeId: Value(output.outputTypeId),
+            date: Value(output.date),
+            updatedAt: Value(output.updatedAt),
+            synced: Value(output.synced),
+          ),
+        );
+
+        // Log audit
+        await auditService.logUpdate(
+          userId: output.userId,
+          entityType: 'output',
+          entityId: output.id,
+          oldValues: {
+            'productId': oldOutput.productId,
+            'quantity': oldOutput.quantity,
+            'measurementUnitId': oldOutput.measurementUnitId,
+            'totalAmount': oldOutput.totalAmount,
+            'outputTypeId': oldOutput.outputTypeId,
+            'date': oldOutput.date.toIso8601String(),
+          },
+          newValues: {
+            'productId': output.productId,
+            'quantity': output.quantity,
+            'measurementUnitId': output.measurementUnitId,
+            'totalAmount': output.totalAmount,
+            'outputTypeId': output.outputTypeId,
+            'date': output.date.toIso8601String(),
+          },
+        );
+
+        // Update product quantity based on the difference
+        // If quantity increased, decrease product quantity more
+        // If quantity decreased, increase product quantity back
+        if (quantityDifference != 0) {
+          final product = await (database.select(database.products)
+                ..where((tbl) => tbl.id.equals(output.productId)))
+              .getSingleOrNull();
+
+          if (product != null) {
+            final oldQuantity = product.quantity;
+            final newQuantity = product.quantity - quantityDifference;
+
+            await (database.update(database.products)
+                  ..where((tbl) => tbl.id.equals(output.productId)))
+                .write(ProductsCompanion(
+              quantity: Value(newQuantity),
+              updatedAt: Value(DateTime.now()),
+              synced: const Value(false),
+            ));
+
+            // Log product quantity update
+            await auditService.logUpdate(
+              userId: output.userId,
+              entityType: 'product',
+              entityId: output.productId,
+              oldValues: {'quantity': oldQuantity},
+              newValues: {'quantity': newQuantity},
+            );
+          }
+        }
+      }
+    });
   }
 
   @override
@@ -314,6 +441,7 @@ class OutputLocalDataSourceImpl implements OutputLocalDataSource {
         date: output.date,
         createdAt: Value(output.createdAt),
         updatedAt: Value(output.updatedAt),
+        synced: Value(output.synced),
       ),
     );
   }
@@ -334,6 +462,7 @@ class OutputLocalDataSourceImpl implements OutputLocalDataSource {
             date: output.date,
             createdAt: Value(output.createdAt),
             updatedAt: Value(output.updatedAt),
+            synced: Value(output.synced),
           ),
         );
       }
@@ -342,9 +471,61 @@ class OutputLocalDataSourceImpl implements OutputLocalDataSource {
 
   @override
   Future<void> delete(String id) async {
-    await (database.delete(database.outputs)
-          ..where((tbl) => tbl.id.equals(id)))
-        .go();
+    await database.transaction(() async {
+      // Get the output before deleting to restore product quantity
+      final output = await (database.select(database.outputs)
+            ..where((tbl) => tbl.id.equals(id)))
+          .getSingleOrNull();
+
+      if (output != null) {
+        // Delete the output
+        await (database.delete(database.outputs)
+              ..where((tbl) => tbl.id.equals(id)))
+            .go();
+
+        // Log audit
+        await auditService.logDelete(
+          userId: output.userId,
+          entityType: 'output',
+          entityId: output.id,
+          oldValues: {
+            'productId': output.productId,
+            'quantity': output.quantity,
+            'measurementUnitId': output.measurementUnitId,
+            'totalAmount': output.totalAmount,
+            'outputTypeId': output.outputTypeId,
+            'date': output.date.toIso8601String(),
+          },
+        );
+
+        // Restore product quantity - increase by output quantity
+        final product = await (database.select(database.products)
+              ..where((tbl) => tbl.id.equals(output.productId)))
+            .getSingleOrNull();
+
+        if (product != null) {
+          final oldQuantity = product.quantity;
+          final newQuantity = product.quantity + output.quantity;
+
+          await (database.update(database.products)
+                ..where((tbl) => tbl.id.equals(output.productId)))
+              .write(ProductsCompanion(
+            quantity: Value(newQuantity),
+            updatedAt: Value(DateTime.now()),
+            synced: const Value(false),
+          ));
+
+          // Log product quantity update
+          await auditService.logUpdate(
+            userId: output.userId,
+            entityType: 'product',
+            entityId: output.productId,
+            oldValues: {'quantity': oldQuantity},
+            newValues: {'quantity': newQuantity},
+          );
+        }
+      }
+    });
   }
 
   @override
@@ -370,6 +551,7 @@ class OutputLocalDataSourceImpl implements OutputLocalDataSource {
               date: item.date,
               createdAt: item.createdAt,
               updatedAt: item.updatedAt,
+              synced: item.synced,
             ))
         .toList();
   }

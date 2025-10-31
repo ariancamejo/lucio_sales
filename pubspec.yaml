@@ -37,6 +37,7 @@ dependencies:
   responsive_framework: ^1.5.1
   fl_chart: ^0.69.2
   excel: ^4.0.6
+  flutter_svg: ^2.0.14
 
   # State Management
   flutter_bloc: ^8.1.6
@@ -47,8 +48,7 @@ dependencies:
   google_sign_in: ^6.2.2
 
   # Local Database
-  drift: ^2.23.0
-  sqlite3_flutter_libs: ^0.5.24
+  drift: ^2.26.1
   path_provider: ^2.1.5
   path: ^1.9.0
 
@@ -59,6 +59,9 @@ dependencies:
   # Dependency Injection
   get_it: ^8.0.2
 
+  # Navigation
+  go_router: ^14.6.2
+
   # Utils
   connectivity_plus: ^6.1.1
   intl: ^0.19.0
@@ -66,6 +69,9 @@ dependencies:
   dartz: ^0.10.1
   envied: ^0.5.4+1
   shared_preferences: ^2.3.3
+  sqlite3_flutter_libs: ^0.5.40
+  sqlite3_web: ^0.3.2
+  file_picker: ^10.3.3
 
 dev_dependencies:
   flutter_test:
@@ -77,8 +83,9 @@ dev_dependencies:
   build_runner: ^2.4.13
   freezed: ^2.5.7
   json_serializable: ^6.8.0
-  drift_dev: ^2.23.0
+  drift_dev: ^2.26.0
   envied_generator: ^0.5.4+1
+  spider: ^4.2.2
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
@@ -92,9 +99,8 @@ flutter:
   uses-material-design: true
 
   # To add assets to your application, add an assets section, like this:
-  # assets:
-  #   - images/a_dot_burr.jpeg
-  #   - images/a_dot_ham.jpeg
+  assets:
+    - assets/images/logo.svg
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images

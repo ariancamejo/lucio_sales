@@ -21,9 +21,11 @@ class MeasurementUnitRemoteDataSourceImpl implements MeasurementUnitRemoteDataSo
         .select()
         .order('name', ascending: true);
 
-    return (response as List)
-        .map((json) => MeasurementUnit.fromJson(json))
-        .toList();
+    return (response as List).map((json) {
+      final unit = Map<String, dynamic>.from(json);
+      unit['synced'] = true;
+      return MeasurementUnit.fromJson(unit);
+    }).toList();
   }
 
   @override
@@ -34,7 +36,9 @@ class MeasurementUnitRemoteDataSourceImpl implements MeasurementUnitRemoteDataSo
         .eq('id', id)
         .single();
 
-    return MeasurementUnit.fromJson(response);
+    final unit = Map<String, dynamic>.from(response);
+    unit['synced'] = true;
+    return MeasurementUnit.fromJson(unit);
   }
 
   @override
@@ -42,6 +46,7 @@ class MeasurementUnitRemoteDataSourceImpl implements MeasurementUnitRemoteDataSo
     final data = measurementUnit.toJson();
     data.remove('created_at');
     data.remove('updated_at');
+    data.remove('synced'); // synced is a local-only field
 
     final response = await client
         .from('measurement_units')
@@ -49,7 +54,9 @@ class MeasurementUnitRemoteDataSourceImpl implements MeasurementUnitRemoteDataSo
         .select()
         .single();
 
-    return MeasurementUnit.fromJson(response);
+    final unit = Map<String, dynamic>.from(response);
+    unit['synced'] = true;
+    return MeasurementUnit.fromJson(unit);
   }
 
   @override
@@ -57,6 +64,7 @@ class MeasurementUnitRemoteDataSourceImpl implements MeasurementUnitRemoteDataSo
     final data = measurementUnit.toJson();
     data.remove('created_at');
     data.remove('updated_at');
+    data.remove('synced'); // synced is a local-only field
 
     final response = await client
         .from('measurement_units')
@@ -65,7 +73,9 @@ class MeasurementUnitRemoteDataSourceImpl implements MeasurementUnitRemoteDataSo
         .select()
         .single();
 
-    return MeasurementUnit.fromJson(response);
+    final unit = Map<String, dynamic>.from(response);
+    unit['synced'] = true;
+    return MeasurementUnit.fromJson(unit);
   }
 
   @override

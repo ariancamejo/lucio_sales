@@ -92,6 +92,7 @@ class OutputRemoteDataSourceImpl implements OutputRemoteDataSource {
     data.remove('product');
     data.remove('measurement_unit');
     data.remove('output_type');
+    data.remove('synced'); // synced is a local-only field
 
     final response = await client
         .from('outputs')
@@ -115,6 +116,7 @@ class OutputRemoteDataSourceImpl implements OutputRemoteDataSource {
     data.remove('product');
     data.remove('measurement_unit');
     data.remove('output_type');
+    data.remove('synced'); // synced is a local-only field
 
     final response = await client
         .from('outputs')
@@ -248,6 +250,8 @@ class OutputRemoteDataSourceImpl implements OutputRemoteDataSource {
   }
 
   Output _parseOutput(Map<String, dynamic> json) {
-    return Output.fromJson(json);
+    final output = Map<String, dynamic>.from(json);
+    output['synced'] = true; // Mark as synced since it's from server
+    return Output.fromJson(output);
   }
 }

@@ -7,15 +7,21 @@ import '../../../core/services/auth_service.dart';
 import '../../../domain/entities/product.dart';
 import '../../blocs/product/product_bloc.dart';
 import '../../blocs/product/product_event.dart';
+import '../../blocs/product/product_state.dart';
 import '../../blocs/measurement_unit/measurement_unit_bloc.dart';
 import '../../blocs/measurement_unit/measurement_unit_event.dart';
 import '../../blocs/measurement_unit/measurement_unit_state.dart';
 
 class ProductFormScreen extends StatefulWidget {
+  /// Product ID for editing (from route parameter)
+  final String? productId;
+
+  /// Legacy support for passing Product object directly
   final Product? product;
 
   const ProductFormScreen({
     super.key,
+    this.productId,
     this.product,
   });
 
@@ -33,23 +39,44 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
 
   String? _selectedMeasurementUnitId;
   bool _active = false;
+  Product? _loadedProduct;
+  bool _isLoadingData = false;
 
-  bool get isEditing => widget.product != null;
+  bool get isEditing => widget.product != null || widget.productId != null;
 
   @override
   void initState() {
     super.initState();
+    _loadFormData();
+  }
+
+  Future<void> _loadFormData() async {
+    // If editing by ID, set loading state
+    if (widget.productId != null && widget.product == null) {
+      setState(() => _isLoadingData = true);
+    }
+
+    // Load measurement units
     context.read<MeasurementUnitBloc>().add(LoadMeasurementUnits());
 
-    if (isEditing) {
-      _nameController.text = widget.product!.name;
-      _codeController.text = widget.product!.code;
-      _quantityController.text = widget.product!.quantity.toString();
-      _costController.text = widget.product!.cost.toString();
-      _priceController.text = widget.product!.price.toString();
-      _selectedMeasurementUnitId = widget.product!.measurementUnitId;
-      _active = widget.product!.active;
+    // If we have a product object, load it immediately
+    if (widget.product != null) {
+      _loadProductData(widget.product!);
+    } else if (widget.productId != null) {
+      // If we only have a productId, we need to load products first
+      context.read<ProductBloc>().add(const LoadProducts());
     }
+  }
+
+  void _loadProductData(Product product) {
+    _nameController.text = product.name;
+    _codeController.text = product.code;
+    _quantityController.text = product.quantity.toString();
+    _costController.text = product.cost.toString();
+    _priceController.text = product.price.toString();
+    _selectedMeasurementUnitId = product.measurementUnitId;
+    _active = product.active;
+    _loadedProduct = product;
   }
 
   @override
@@ -64,11 +91,35 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(isEditing ? 'Edit Product' : 'New Product'),
-      ),
-      body: Form(
+    return BlocListener<ProductBloc, ProductState>(
+      listener: (context, state) {
+        // When products are loaded and we have a productId, find and load it
+        if (state is ProductLoaded && widget.productId != null && _loadedProduct == null) {
+          try {
+            final product = state.products.firstWhere(
+              (p) => p.id == widget.productId,
+            );
+            setState(() {
+              _loadProductData(product);
+              _isLoadingData = false; // Mark loading as complete
+            });
+          } catch (e) {
+            debugPrint('Product with ID ${widget.productId} not found: $e');
+            setState(() => _isLoadingData = false);
+          }
+        }
+      },
+      child: _isLoadingData
+          ? const Scaffold(
+              body: Center(
+                child: CircularProgressIndicator(),
+              ),
+            )
+          : Scaffold(
+        appBar: AppBar(
+          title: Text(isEditing ? 'Edit Product' : 'New Product'),
+        ),
+        body: Form(
         key: _formKey,
         child: ListView(
           padding: const EdgeInsets.all(16),
@@ -219,6 +270,7 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
           ],
         ),
       ),
+      ),
     );
   }
 
@@ -234,10 +286,13 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
         return;
       }
 
+      // Get the existing product (either from widget or loaded)
+      final existingProduct = widget.product ?? _loadedProduct;
+
       final now = DateTime.now();
       final product = Product(
-        id: isEditing ? widget.product!.id : const Uuid().v4(),
-        userId: isEditing ? widget.product!.userId : currentUser!.id,
+        id: isEditing ? existingProduct!.id : const Uuid().v4(),
+        userId: isEditing ? existingProduct!.userId : currentUser!.id,
         name: _nameController.text.trim(),
         code: _codeController.text.trim(),
         quantity: double.parse(_quantityController.text),
@@ -245,7 +300,7 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
         cost: double.parse(_costController.text),
         price: double.parse(_priceController.text),
         active: _active,
-        createdAt: isEditing ? widget.product!.createdAt : now,
+        createdAt: isEditing ? existingProduct!.createdAt : now,
         updatedAt: now,
       );
 

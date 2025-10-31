@@ -2,6 +2,7 @@ import 'package:drift/drift.dart';
 import '../../../core/database/app_database.dart';
 import '../../../domain/entities/output_type.dart' as entity;
 import '../../../domain/models/paginated_result.dart';
+import '../../../core/services/audit_service.dart';
 
 abstract class OutputTypeLocalDataSource {
   Future<List<entity.OutputType>> getAll();
@@ -23,8 +24,11 @@ abstract class OutputTypeLocalDataSource {
 
 class OutputTypeLocalDataSourceImpl implements OutputTypeLocalDataSource {
   final AppDatabase database;
+  late final AuditService auditService;
 
-  OutputTypeLocalDataSourceImpl({required this.database});
+  OutputTypeLocalDataSourceImpl({required this.database}) {
+    auditService = AuditService(database: database);
+  }
 
   @override
   Future<List<entity.OutputType>> getAll() async {
@@ -36,6 +40,7 @@ class OutputTypeLocalDataSourceImpl implements OutputTypeLocalDataSource {
               name: item.name,
               createdAt: item.createdAt,
               updatedAt: item.updatedAt,
+              synced: item.synced,
             ))
         .toList();
   }
@@ -62,6 +67,7 @@ class OutputTypeLocalDataSourceImpl implements OutputTypeLocalDataSource {
               name: item.name,
               createdAt: item.createdAt,
               updatedAt: item.updatedAt,
+              synced: item.synced,
             ))
         .toList();
 
@@ -96,6 +102,7 @@ class OutputTypeLocalDataSourceImpl implements OutputTypeLocalDataSource {
       name: item.name,
       createdAt: item.createdAt,
       updatedAt: item.updatedAt,
+      synced: item.synced,
     );
   }
 
@@ -108,19 +115,48 @@ class OutputTypeLocalDataSourceImpl implements OutputTypeLocalDataSource {
             name: outputType.name,
           ),
         );
+
+    // Log creation
+    await auditService.logCreate(
+      userId: outputType.userId,
+      entityType: 'output_type',
+      entityId: outputType.id,
+      newValues: {
+        'name': outputType.name,
+      },
+    );
   }
 
   @override
   Future<void> update(entity.OutputType outputType) async{
+    // Get old values for audit
+    final oldType = await getById(outputType.id);
+
     await (database.update(database.outputTypes)
           ..where((tbl) => tbl.id.equals(outputType.id)))
         .write(
-      OutputTypesCompanion.insert(
-        id: outputType.id,
-        userId: outputType.userId,
-        name: outputType.name,
+      OutputTypesCompanion(
+        userId: Value(outputType.userId),
+        name: Value(outputType.name),
+        updatedAt: Value(outputType.updatedAt),
+        synced: Value(outputType.synced),
       ),
     );
+
+    // Log update
+    if (oldType != null) {
+      await auditService.logUpdate(
+        userId: outputType.userId,
+        entityType: 'output_type',
+        entityId: outputType.id,
+        oldValues: {
+          'name': oldType.name,
+        },
+        newValues: {
+          'name': outputType.name,
+        },
+      );
+    }
   }
 
   @override
@@ -132,6 +168,7 @@ class OutputTypeLocalDataSourceImpl implements OutputTypeLocalDataSource {
         name: outputType.name,
         createdAt: Value(outputType.createdAt),
         updatedAt: Value(outputType.updatedAt),
+        synced: Value(outputType.synced),
       ),
     );
   }
@@ -147,6 +184,7 @@ class OutputTypeLocalDataSourceImpl implements OutputTypeLocalDataSource {
             name: type.name,
             createdAt: Value(type.createdAt),
             updatedAt: Value(type.updatedAt),
+            synced: Value(type.synced),
           ),
         );
       }
@@ -155,9 +193,24 @@ class OutputTypeLocalDataSourceImpl implements OutputTypeLocalDataSource {
 
   @override
   Future<void> delete(String id) async {
+    // Get type for audit before deletion
+    final type = await getById(id);
+
     await (database.delete(database.outputTypes)
           ..where((tbl) => tbl.id.equals(id)))
         .go();
+
+    // Log deletion
+    if (type != null) {
+      await auditService.logDelete(
+        userId: type.userId,
+        entityType: 'output_type',
+        entityId: id,
+        oldValues: {
+          'name': type.name,
+        },
+      );
+    }
   }
 
   @override
@@ -178,6 +231,7 @@ class OutputTypeLocalDataSourceImpl implements OutputTypeLocalDataSource {
               name: item.name,
               createdAt: item.createdAt,
               updatedAt: item.updatedAt,
+              synced: item.synced,
             ))
         .toList();
   }

@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 import '../../blocs/measurement_unit/measurement_unit_bloc.dart';
 import '../../blocs/measurement_unit/measurement_unit_event.dart';
 import '../../blocs/measurement_unit/measurement_unit_state.dart';
-
-import 'measurement_unit_form_screen.dart';
+import '../../blocs/sync/sync_bloc.dart';
+import '../../blocs/sync/sync_event.dart';
 
 class MeasurementUnitListScreen extends StatefulWidget {
   const MeasurementUnitListScreen({super.key});
@@ -34,11 +35,7 @@ class _MeasurementUnitListScreenState extends State<MeasurementUnitListScreen> {
     return Scaffold(
       floatingActionButton: FloatingActionButton(
         onPressed: () {
-          Navigator.of(context).push(
-            MaterialPageRoute(
-              builder: (context) => const MeasurementUnitFormScreen(),
-            ),
-          );
+          context.push('/measurement-units/new');
         },
         child: const Icon(Icons.add),
       ),
@@ -51,8 +48,6 @@ class _MeasurementUnitListScreenState extends State<MeasurementUnitListScreen> {
                 backgroundColor: Colors.red,
               ),
             );
-            // Reload list to ensure UI reflects actual database state
-            _loadPage(_currentPage);
           } else if (state is MeasurementUnitOperationSuccess) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
@@ -60,7 +55,13 @@ class _MeasurementUnitListScreenState extends State<MeasurementUnitListScreen> {
                 backgroundColor: Colors.green,
               ),
             );
-            _loadPage(_currentPage);
+          } else if (state is MeasurementUnitPaginatedLoaded) {
+            // Sync local page state with bloc state
+            if (_currentPage != state.currentPage) {
+              setState(() {
+                _currentPage = state.currentPage;
+              });
+            }
           }
         },
         builder: (context, state) {
@@ -186,13 +187,7 @@ class _MeasurementUnitListScreenState extends State<MeasurementUnitListScreen> {
       elevation: 2,
       child: InkWell(
         onTap: () {
-          Navigator.of(context).push(
-            MaterialPageRoute(
-              builder: (context) => MeasurementUnitFormScreen(
-                measurementUnit: unit,
-              ),
-            ),
-          );
+          context.push('/measurement-units/${unit.id}/edit');
         },
         child: Padding(
           padding: const EdgeInsets.all(12),
@@ -234,18 +229,34 @@ class _MeasurementUnitListScreenState extends State<MeasurementUnitListScreen> {
                   ],
                 ),
               ),
+              if (!unit.synced)
+                Tooltip(
+                  message: 'Not synced - Tap to sync',
+                  child: InkWell(
+                    onTap: () {
+                      context.read<SyncBloc>().add(StartSync());
+                    },
+                    child: Container(
+                      margin: const EdgeInsets.only(left: 6),
+                      padding: const EdgeInsets.all(4),
+                      decoration: BoxDecoration(
+                        color: Colors.orange.withValues(alpha: 0.1),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.cloud_off,
+                        size: 14,
+                        color: Colors.orange,
+                      ),
+                    ),
+                  ),
+                ),
               if (!withSwipe) ...[
                 IconButton(
                   icon: const Icon(Icons.edit),
                   color: Colors.blue,
                   onPressed: () {
-                    Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (context) => MeasurementUnitFormScreen(
-                          measurementUnit: unit,
-                        ),
-                      ),
-                    );
+                    context.push('/measurement-units/${unit.id}/edit');
                   },
                 ),
                 IconButton(
@@ -292,13 +303,7 @@ class _MeasurementUnitListScreenState extends State<MeasurementUnitListScreen> {
           );
         } else if (direction == DismissDirection.startToEnd) {
           // Swipe right to edit
-          Navigator.of(context).push(
-            MaterialPageRoute(
-              builder: (context) => MeasurementUnitFormScreen(
-                measurementUnit: unit,
-              ),
-            ),
-          );
+          context.push('/measurement-units/${unit.id}/edit');
           return false;
         }
         return false;

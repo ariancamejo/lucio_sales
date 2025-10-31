@@ -11,6 +11,7 @@ class OutputType with _$OutputType {
     required String name,
     required DateTime createdAt,
     required DateTime updatedAt,
+    @Default(false) bool synced,
   }) = _OutputType;
 
   factory OutputType.fromJson(Map<String, dynamic> json) =>

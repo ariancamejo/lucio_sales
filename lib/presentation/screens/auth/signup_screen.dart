@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import '../../../core/di/injection_container.dart';
 import '../../../core/services/auth_service.dart';
 import '../../../core/utils/error_messages.dart';
+import '../../../resources/app_images.dart';
 
 class SignUpScreen extends StatefulWidget {
   const SignUpScreen({super.key});
@@ -86,37 +88,146 @@ class _SignUpScreenState extends State<SignUpScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Sign Up'),
+      body: LayoutBuilder(
+        builder: (context, constraints) {
+          final isDesktop = constraints.maxWidth >= 900;
+          final isTablet = constraints.maxWidth >= 600 && constraints.maxWidth < 900;
+
+          if (isDesktop || isTablet) {
+            // Split screen layout for tablet and desktop
+            return Row(
+              children: [
+                // Left side - Branding
+                Expanded(
+                  flex: isDesktop ? 5 : 4,
+                  child: Container(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [
+                          Theme.of(context).colorScheme.primary,
+                          Theme.of(context).colorScheme.secondary,
+                        ],
+                      ),
+                    ),
+                    child: Stack(
+                      children: [
+                        // Back button
+                        Positioned(
+                          top: 16,
+                          left: 16,
+                          child: SafeArea(
+                            child: IconButton(
+                              icon: const Icon(Icons.arrow_back, color: Colors.white),
+                              onPressed: () => Navigator.of(context).pop(),
+                            ),
+                          ),
+                        ),
+                        // Centered content
+                        Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              SvgPicture.asset(
+                                AppImages.logo,
+                                width: isDesktop ? 200 : 150,
+                                height: isDesktop ? 200 : 150,
+                              ),
+                              const SizedBox(height: 32),
+                              Text(
+                                'Lucio Sales',
+                                style: Theme.of(context).textTheme.displaySmall?.copyWith(
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.white,
+                                    ),
+                              ),
+                              const SizedBox(height: 16),
+                              Padding(
+                                padding: const EdgeInsets.symmetric(horizontal: 48),
+                                child: Text(
+                                  'Join us and start managing your inventory',
+                                  textAlign: TextAlign.center,
+                                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                        color: Colors.white.withValues(alpha: 0.9),
+                                      ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                // Right side - SignUp Form
+                Expanded(
+                  flex: isDesktop ? 5 : 6,
+                  child: _buildSignUpForm(context, maxWidth: 450),
+                ),
+              ],
+            );
+          } else {
+            // Mobile layout - single column with AppBar
+            return Scaffold(
+              appBar: AppBar(
+                title: const Text('Sign Up'),
+              ),
+              body: _buildSignUpForm(context),
+            );
+          }
+        },
       ),
-      body: SafeArea(
-        child: Center(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(24.0),
+    );
+  }
+
+  Widget _buildSignUpForm(BuildContext context, {double? maxWidth}) {
+    return SafeArea(
+      child: Center(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(24.0),
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              maxWidth: maxWidth ?? double.infinity,
+            ),
             child: Form(
               key: _formKey,
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Icon(
-                    Icons.person_add,
-                    size: 80,
-                    color: Theme.of(context).colorScheme.primary,
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    'Create Account',
-                    textAlign: TextAlign.center,
-                    style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                          fontWeight: FontWeight.bold,
-                        ),
-                  ),
-                  const SizedBox(height: 8),
+                  // Show logo only on mobile
+                  if (maxWidth == null) ...[
+                    Center(
+                      child: SvgPicture.asset(
+                        AppImages.logo,
+                        width: 100,
+                        height: 100,
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                    Text(
+                      'Create Account',
+                      textAlign: TextAlign.center,
+                      style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                            fontWeight: FontWeight.bold,
+                          ),
+                    ),
+                    const SizedBox(height: 8),
+                  ],
+                  if (maxWidth != null) ...[
+                    Text(
+                      'Create Account',
+                      style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                            fontWeight: FontWeight.bold,
+                          ),
+                    ),
+                    const SizedBox(height: 8),
+                  ],
                   Text(
                     'Sign up to get started',
-                    textAlign: TextAlign.center,
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    textAlign: maxWidth == null ? TextAlign.center : TextAlign.left,
+                    style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                           color: Colors.grey[600],
                         ),
                   ),

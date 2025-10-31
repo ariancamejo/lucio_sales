@@ -3,6 +3,7 @@ import '../../../domain/entities/product_entry.dart' as entity;
 import '../../../domain/entities/product.dart' as entity;
 import '../../../domain/models/paginated_result.dart';
 import 'package:drift/drift.dart';
+import '../../../core/services/audit_service.dart';
 
 abstract class ProductEntryLocalDataSource {
   Future<List<entity.ProductEntry>> getAll({String? userId});
@@ -24,8 +25,11 @@ abstract class ProductEntryLocalDataSource {
 
 class ProductEntryLocalDataSourceImpl implements ProductEntryLocalDataSource {
   final AppDatabase database;
+  late final AuditService auditService;
 
-  ProductEntryLocalDataSourceImpl(this.database);
+  ProductEntryLocalDataSourceImpl(this.database) {
+    auditService = AuditService(database: database);
+  }
 
   @override
   Future<List<entity.ProductEntry>> getAll({String? userId}) async {
@@ -57,6 +61,7 @@ class ProductEntryLocalDataSourceImpl implements ProductEntryLocalDataSource {
         notes: entry.notes,
         createdAt: entry.createdAt,
         updatedAt: entry.updatedAt,
+        synced: entry.synced,
         product: product != null
             ? _productFromRow(product)
             : null,
@@ -77,6 +82,7 @@ class ProductEntryLocalDataSourceImpl implements ProductEntryLocalDataSource {
       active: product.active,
       createdAt: product.createdAt,
       updatedAt: product.updatedAt,
+      synced: product.synced,
     );
   }
 
@@ -118,6 +124,7 @@ class ProductEntryLocalDataSourceImpl implements ProductEntryLocalDataSource {
         notes: entry.notes,
         createdAt: entry.createdAt,
         updatedAt: entry.updatedAt,
+        synced: entry.synced,
         product: product != null
             ? _productFromRow(product)
             : null,
@@ -171,6 +178,7 @@ class ProductEntryLocalDataSourceImpl implements ProductEntryLocalDataSource {
         notes: entry.notes,
         createdAt: entry.createdAt,
         updatedAt: entry.updatedAt,
+        synced: entry.synced,
         product: product != null
             ? _productFromRow(product)
             : null,
@@ -200,6 +208,7 @@ class ProductEntryLocalDataSourceImpl implements ProductEntryLocalDataSource {
       notes: entry.notes,
       createdAt: entry.createdAt,
       updatedAt: entry.updatedAt,
+      synced: entry.synced,
       product: product != null
           ? _productFromRow(product)
           : null,
@@ -220,10 +229,26 @@ class ProductEntryLocalDataSourceImpl implements ProductEntryLocalDataSource {
             updatedAt: Value(productEntry.updatedAt),
           ),
         );
+
+    // Log creation
+    await auditService.logCreate(
+      userId: productEntry.userId,
+      entityType: 'product_entry',
+      entityId: productEntry.id,
+      newValues: {
+        'productId': productEntry.productId,
+        'quantity': productEntry.quantity,
+        'date': productEntry.date.toIso8601String(),
+        'notes': productEntry.notes,
+      },
+    );
   }
 
   @override
   Future<void> update(entity.ProductEntry productEntry) async {
+    // Get old values for audit
+    final oldEntry = await getById(productEntry.id);
+
     await (database.update(database.productEntries)
           ..where((tbl) => tbl.id.equals(productEntry.id)))
         .write(
@@ -233,16 +258,52 @@ class ProductEntryLocalDataSourceImpl implements ProductEntryLocalDataSource {
         quantity: Value(productEntry.quantity),
         date: Value(productEntry.date),
         notes: Value(productEntry.notes),
-        updatedAt: Value(DateTime.now()),
+        updatedAt: Value(productEntry.updatedAt),
+        synced: Value(productEntry.synced),
       ),
+    );
+
+    // Log update
+    await auditService.logUpdate(
+      userId: productEntry.userId,
+      entityType: 'product_entry',
+      entityId: productEntry.id,
+      oldValues: {
+        'productId': oldEntry.productId,
+        'quantity': oldEntry.quantity,
+        'date': oldEntry.date.toIso8601String(),
+        'notes': oldEntry.notes,
+      },
+      newValues: {
+        'productId': productEntry.productId,
+        'quantity': productEntry.quantity,
+        'date': productEntry.date.toIso8601String(),
+        'notes': productEntry.notes,
+      },
     );
   }
 
   @override
   Future<void> delete(String id) async {
+    // Get entry for audit before deletion
+    final entry = await getById(id);
+
     await (database.delete(database.productEntries)
           ..where((tbl) => tbl.id.equals(id)))
         .go();
+
+    // Log deletion
+    await auditService.logDelete(
+      userId: entry.userId,
+      entityType: 'product_entry',
+      entityId: id,
+      oldValues: {
+        'productId': entry.productId,
+        'quantity': entry.quantity,
+        'date': entry.date.toIso8601String(),
+        'notes': entry.notes,
+      },
+    );
   }
 
   @override
@@ -259,6 +320,7 @@ class ProductEntryLocalDataSourceImpl implements ProductEntryLocalDataSource {
             notes: Value(productEntry.notes),
             createdAt: Value(productEntry.createdAt),
             updatedAt: Value(productEntry.updatedAt),
+            synced: Value(productEntry.synced),
           ));
     }
   }
@@ -288,6 +350,7 @@ class ProductEntryLocalDataSourceImpl implements ProductEntryLocalDataSource {
               notes: item.notes,
               createdAt: item.createdAt,
               updatedAt: item.updatedAt,
+              synced: item.synced,
             ))
         .toList();
   }

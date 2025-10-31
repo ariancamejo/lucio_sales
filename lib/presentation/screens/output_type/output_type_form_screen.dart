@@ -6,13 +6,15 @@ import '../../../core/services/auth_service.dart';
 import '../../../domain/entities/output_type.dart';
 import '../../blocs/output_type/output_type_bloc.dart';
 import '../../blocs/output_type/output_type_event.dart';
+import '../../blocs/output_type/output_type_state.dart';
 
 class OutputTypeFormScreen extends StatefulWidget {
-  final OutputType? outputType;
+  /// Output Type ID for editing (from route parameter)
+  final String? outputTypeId;
 
   const OutputTypeFormScreen({
     super.key,
-    this.outputType,
+    this.outputTypeId,
   });
 
   @override
@@ -22,15 +24,21 @@ class OutputTypeFormScreen extends StatefulWidget {
 class _OutputTypeFormScreenState extends State<OutputTypeFormScreen> {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
+  OutputType? _loadedType;
 
-  bool get isEditing => widget.outputType != null;
+  bool get isEditing => widget.outputTypeId != null;
 
   @override
   void initState() {
     super.initState();
-    if (isEditing) {
-      _nameController.text = widget.outputType!.name;
+    if (widget.outputTypeId != null) {
+      context.read<OutputTypeBloc>().add(LoadOutputTypes());
     }
+  }
+
+  void _loadTypeData(OutputType type) {
+    _nameController.text = type.name;
+    _loadedType = type;
   }
 
   @override
@@ -41,38 +49,54 @@ class _OutputTypeFormScreenState extends State<OutputTypeFormScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(isEditing ? 'Edit Output Type' : 'New Output Type'),
-      ),
-      body: Form(
-        key: _formKey,
-        child: ListView(
-          padding: const EdgeInsets.all(16),
-          children: [
-            TextFormField(
-              controller: _nameController,
-              decoration: const InputDecoration(
-                labelText: 'Name',
-                border: OutlineInputBorder(),
-                hintText: 'e.g., Sale, Loss, Sample',
+    return BlocListener<OutputTypeBloc, OutputTypeState>(
+      listener: (context, state) {
+        if (state is OutputTypeLoaded && widget.outputTypeId != null && _loadedType == null) {
+          try {
+            final type = state.outputTypes.firstWhere(
+              (t) => t.id == widget.outputTypeId,
+            );
+            setState(() {
+              _loadTypeData(type);
+            });
+          } catch (e) {
+            debugPrint('OutputType with ID ${widget.outputTypeId} not found: $e');
+          }
+        }
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          title: Text(isEditing ? 'Edit Output Type' : 'New Output Type'),
+        ),
+        body: Form(
+          key: _formKey,
+          child: ListView(
+            padding: const EdgeInsets.all(16),
+            children: [
+              TextFormField(
+                controller: _nameController,
+                decoration: const InputDecoration(
+                  labelText: 'Name',
+                  border: OutlineInputBorder(),
+                  hintText: 'e.g., Sale, Loss, Sample',
+                ),
+                validator: (value) {
+                  if (value == null || value.trim().isEmpty) {
+                    return 'Please enter a name';
+                  }
+                  return null;
+                },
               ),
-              validator: (value) {
-                if (value == null || value.trim().isEmpty) {
-                  return 'Please enter a name';
-                }
-                return null;
-              },
-            ),
-            const SizedBox(height: 24),
-            ElevatedButton(
-              onPressed: _handleSubmit,
-              style: ElevatedButton.styleFrom(
-                padding: const EdgeInsets.all(16),
+              const SizedBox(height: 24),
+              ElevatedButton(
+                onPressed: _handleSubmit,
+                style: ElevatedButton.styleFrom(
+                  padding: const EdgeInsets.all(16),
+                ),
+                child: Text(isEditing ? 'Update' : 'Create'),
               ),
-              child: Text(isEditing ? 'Update' : 'Create'),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -92,10 +116,10 @@ class _OutputTypeFormScreenState extends State<OutputTypeFormScreen> {
 
       final now = DateTime.now();
       final outputType = OutputType(
-        id: isEditing ? widget.outputType!.id : const Uuid().v4(),
-        userId: isEditing ? widget.outputType!.userId : currentUser!.id,
+        id: isEditing ? _loadedType!.id : const Uuid().v4(),
+        userId: isEditing ? _loadedType!.userId : currentUser!.id,
         name: _nameController.text.trim(),
-        createdAt: isEditing ? widget.outputType!.createdAt : now,
+        createdAt: isEditing ? _loadedType!.createdAt : now,
         updatedAt: now,
       );
 

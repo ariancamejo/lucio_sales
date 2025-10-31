@@ -28,7 +28,6 @@ class SearchableProductField extends StatefulWidget {
 class _SearchableProductFieldState extends State<SearchableProductField> {
   final TextEditingController _textController = TextEditingController();
   Product? _selectedProduct;
-  String? _errorText;
 
   @override
   void initState() {
@@ -42,6 +41,22 @@ class _SearchableProductFieldState extends State<SearchableProductField> {
   }
 
   @override
+  void didUpdateWidget(SearchableProductField oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // Update selected product when initialProduct changes
+    if (widget.initialProduct != oldWidget.initialProduct) {
+      setState(() {
+        _selectedProduct = widget.initialProduct;
+        if (_selectedProduct != null) {
+          _textController.text = '${_selectedProduct!.name} (${_selectedProduct!.code})';
+        } else {
+          _textController.clear();
+        }
+      });
+    }
+  }
+
+  @override
   void dispose() {
     _textController.dispose();
     super.dispose();
@@ -49,10 +64,7 @@ class _SearchableProductFieldState extends State<SearchableProductField> {
 
   void _validateSelection() {
     if (widget.validator != null) {
-      final error = widget.validator!(_selectedProduct);
-      setState(() {
-        _errorText = error;
-      });
+      widget.validator!(_selectedProduct);
     }
   }
 
@@ -82,6 +94,7 @@ class _SearchableProductFieldState extends State<SearchableProductField> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Autocomplete<Product>(
+                  key: ValueKey(_selectedProduct?.id ?? 'no-product'),
                   initialValue: _selectedProduct != null
                       ? TextEditingValue(
                           text: '${_selectedProduct!.name} (${_selectedProduct!.code})')

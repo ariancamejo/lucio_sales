@@ -18,6 +18,7 @@ class Product with _$Product {
     required bool active,
     required DateTime createdAt,
     required DateTime updatedAt,
+    @Default(false) bool synced,
     MeasurementUnit? measurementUnit,
   }) = _Product;
 

@@ -26,16 +26,18 @@ class MeasurementUnitPaginatedLoaded extends MeasurementUnitState {
   final int currentPage;
   final int totalPages;
   final int totalItems;
+  final int pageSize;
 
   const MeasurementUnitPaginatedLoaded({
     required this.measurementUnits,
     required this.currentPage,
     required this.totalPages,
     required this.totalItems,
+    required this.pageSize,
   });
 
   @override
-  List<Object> get props => [measurementUnits, currentPage, totalPages, totalItems];
+  List<Object> get props => [measurementUnits, currentPage, totalPages, totalItems, pageSize];
 }
 
 class MeasurementUnitError extends MeasurementUnitState {

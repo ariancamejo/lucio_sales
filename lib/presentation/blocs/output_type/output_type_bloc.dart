@@ -37,12 +37,20 @@ class OutputTypeBloc extends Bloc<OutputTypeEvent, OutputTypeState> {
     );
     result.fold(
       (failure) => emit(OutputTypeError(failure.message)),
-      (paginatedResult) => emit(OutputTypePaginatedLoaded(
-        outputTypes: paginatedResult.items,
-        currentPage: paginatedResult.page,
-        totalPages: paginatedResult.totalPages,
-        totalItems: paginatedResult.totalCount,
-      )),
+      (paginatedResult) {
+        // If current page is empty and not the first page, go to previous page
+        if (paginatedResult.items.isEmpty && event.page > 1) {
+          add(LoadOutputTypesPaginated(page: event.page - 1, pageSize: event.pageSize));
+        } else {
+          emit(OutputTypePaginatedLoaded(
+            outputTypes: paginatedResult.items,
+            currentPage: paginatedResult.page,
+            totalPages: paginatedResult.totalPages,
+            totalItems: paginatedResult.totalCount,
+            pageSize: event.pageSize,
+          ));
+        }
+      },
     );
   }
 
@@ -50,12 +58,34 @@ class OutputTypeBloc extends Bloc<OutputTypeEvent, OutputTypeState> {
     CreateOutputType event,
     Emitter<OutputTypeState> emit,
   ) async {
+    // Save current state before operation
+    final previousState = state;
+
     final result = await repository.create(event.outputType);
     result.fold(
-      (failure) => emit(OutputTypeError(failure.message)),
+      (failure) {
+        emit(OutputTypeError(failure.message));
+        // Reload based on previous state to recover from error
+        if (previousState is OutputTypePaginatedLoaded) {
+          add(LoadOutputTypesPaginated(
+            page: previousState.currentPage,
+            pageSize: previousState.pageSize,
+          ));
+        } else if (previousState is OutputTypeLoaded) {
+          add(LoadOutputTypes());
+        }
+      },
       (_) {
         emit(const OutputTypeOperationSuccess('Output type created successfully'));
-        add(LoadOutputTypes());
+        // Reload based on previous state
+        if (previousState is OutputTypePaginatedLoaded) {
+          add(LoadOutputTypesPaginated(
+            page: previousState.currentPage,
+            pageSize: previousState.pageSize,
+          ));
+        } else {
+          add(LoadOutputTypes());
+        }
       },
     );
   }
@@ -64,12 +94,34 @@ class OutputTypeBloc extends Bloc<OutputTypeEvent, OutputTypeState> {
     UpdateOutputType event,
     Emitter<OutputTypeState> emit,
   ) async {
+    // Save current state before operation
+    final previousState = state;
+
     final result = await repository.update(event.outputType);
     result.fold(
-      (failure) => emit(OutputTypeError(failure.message)),
+      (failure) {
+        emit(OutputTypeError(failure.message));
+        // Reload based on previous state to recover from error
+        if (previousState is OutputTypePaginatedLoaded) {
+          add(LoadOutputTypesPaginated(
+            page: previousState.currentPage,
+            pageSize: previousState.pageSize,
+          ));
+        } else if (previousState is OutputTypeLoaded) {
+          add(LoadOutputTypes());
+        }
+      },
       (_) {
         emit(const OutputTypeOperationSuccess('Output type updated successfully'));
-        add(LoadOutputTypes());
+        // Reload based on previous state
+        if (previousState is OutputTypePaginatedLoaded) {
+          add(LoadOutputTypesPaginated(
+            page: previousState.currentPage,
+            pageSize: previousState.pageSize,
+          ));
+        } else {
+          add(LoadOutputTypes());
+        }
       },
     );
   }
@@ -78,12 +130,34 @@ class OutputTypeBloc extends Bloc<OutputTypeEvent, OutputTypeState> {
     DeleteOutputType event,
     Emitter<OutputTypeState> emit,
   ) async {
+    // Save current state before operation
+    final previousState = state;
+
     final result = await repository.delete(event.id);
     result.fold(
-      (failure) => emit(OutputTypeError(failure.message)),
+      (failure) {
+        emit(OutputTypeError(failure.message));
+        // Reload based on previous state to recover from error
+        if (previousState is OutputTypePaginatedLoaded) {
+          add(LoadOutputTypesPaginated(
+            page: previousState.currentPage,
+            pageSize: previousState.pageSize,
+          ));
+        } else if (previousState is OutputTypeLoaded) {
+          add(LoadOutputTypes());
+        }
+      },
       (_) {
         emit(const OutputTypeOperationSuccess('Output type deleted successfully'));
-        add(LoadOutputTypes());
+        // Reload based on previous state
+        if (previousState is OutputTypePaginatedLoaded) {
+          add(LoadOutputTypesPaginated(
+            page: previousState.currentPage,
+            pageSize: previousState.pageSize,
+          ));
+        } else {
+          add(LoadOutputTypes());
+        }
       },
     );
   }

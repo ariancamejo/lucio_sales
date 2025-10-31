@@ -22,9 +22,11 @@ class ProductEntryRemoteDataSourceImpl implements ProductEntryRemoteDataSource {
         .select('*, product:products(*)')
         .order('date', ascending: false);
 
-    return (response as List)
-        .map((json) => entity.ProductEntry.fromJson(json))
-        .toList();
+    return (response as List).map((json) {
+      final entry = Map<String, dynamic>.from(json);
+      entry['synced'] = true;
+      return entity.ProductEntry.fromJson(entry);
+    }).toList();
   }
 
   @override
@@ -35,9 +37,11 @@ class ProductEntryRemoteDataSourceImpl implements ProductEntryRemoteDataSource {
         .eq('product_id', productId)
         .order('date', ascending: false);
 
-    return (response as List)
-        .map((json) => entity.ProductEntry.fromJson(json))
-        .toList();
+    return (response as List).map((json) {
+      final entry = Map<String, dynamic>.from(json);
+      entry['synced'] = true;
+      return entity.ProductEntry.fromJson(entry);
+    }).toList();
   }
 
   @override
@@ -48,7 +52,9 @@ class ProductEntryRemoteDataSourceImpl implements ProductEntryRemoteDataSource {
         .eq('id', id)
         .single();
 
-    return entity.ProductEntry.fromJson(response);
+    final entry = Map<String, dynamic>.from(response);
+    entry['synced'] = true;
+    return entity.ProductEntry.fromJson(entry);
   }
 
   @override
@@ -68,7 +74,9 @@ class ProductEntryRemoteDataSourceImpl implements ProductEntryRemoteDataSource {
         .select('*, product:products(*)')
         .single();
 
-    return entity.ProductEntry.fromJson(response);
+    final entry = Map<String, dynamic>.from(response);
+    entry['synced'] = true;
+    return entity.ProductEntry.fromJson(entry);
   }
 
   @override
@@ -86,7 +94,9 @@ class ProductEntryRemoteDataSourceImpl implements ProductEntryRemoteDataSource {
         .select('*, product:products(*)')
         .single();
 
-    return entity.ProductEntry.fromJson(response);
+    final entry = Map<String, dynamic>.from(response);
+    entry['synced'] = true;
+    return entity.ProductEntry.fromJson(entry);
   }
 
   @override

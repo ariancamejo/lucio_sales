@@ -5,6 +5,8 @@ import '../../../domain/repositories/measurement_unit_repository.dart';
 import '../../../domain/repositories/output_type_repository.dart';
 import '../../../domain/repositories/product_repository.dart';
 import '../../../domain/repositories/output_repository.dart';
+import '../../../domain/repositories/product_entry_repository.dart';
+import '../../../domain/repositories/user_history_repository.dart';
 import 'sync_event.dart';
 import 'sync_state.dart';
 
@@ -13,6 +15,8 @@ class SyncBloc extends Bloc<SyncEvent, SyncState> {
   final OutputTypeRepository outputTypeRepository;
   final ProductRepository productRepository;
   final OutputRepository outputRepository;
+  final ProductEntryRepository productEntryRepository;
+  final UserHistoryRepository userHistoryRepository;
   final NetworkInfo networkInfo;
   Timer? _syncTimer;
 
@@ -21,6 +25,8 @@ class SyncBloc extends Bloc<SyncEvent, SyncState> {
     required this.outputTypeRepository,
     required this.productRepository,
     required this.outputRepository,
+    required this.productEntryRepository,
+    required this.userHistoryRepository,
     required this.networkInfo,
   }) : super(SyncInitial()) {
     on<StartSync>(_onStartSync);
@@ -59,7 +65,9 @@ class SyncBloc extends Bloc<SyncEvent, SyncState> {
         measurementUnitRepository.sync(),
         outputTypeRepository.sync(),
         productRepository.sync(),
+        productEntryRepository.sync(),
         outputRepository.sync(),
+        userHistoryRepository.syncToRemote(),
       ]);
 
       // Check if any sync failed

@@ -26,16 +26,18 @@ class OutputTypePaginatedLoaded extends OutputTypeState {
   final int currentPage;
   final int totalPages;
   final int totalItems;
+  final int pageSize;
 
   const OutputTypePaginatedLoaded({
     required this.outputTypes,
     required this.currentPage,
     required this.totalPages,
     required this.totalItems,
+    required this.pageSize,
   });
 
   @override
-  List<Object> get props => [outputTypes, currentPage, totalPages, totalItems];
+  List<Object> get props => [outputTypes, currentPage, totalPages, totalItems, pageSize];
 }
 
 class OutputTypeError extends OutputTypeState {

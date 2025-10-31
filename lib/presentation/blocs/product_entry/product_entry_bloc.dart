@@ -44,12 +44,20 @@ class ProductEntryBloc extends Bloc<ProductEntryEvent, ProductEntryState> {
     );
     result.fold(
       (failure) => emit(ProductEntryError(failure.message)),
-      (paginatedResult) => emit(ProductEntryPaginatedLoaded(
-        productEntries: paginatedResult.items,
-        currentPage: paginatedResult.page,
-        totalPages: paginatedResult.totalPages,
-        totalItems: paginatedResult.totalCount,
-      )),
+      (paginatedResult) {
+        // If current page is empty and not the first page, go to previous page
+        if (paginatedResult.items.isEmpty && event.page > 1) {
+          add(LoadProductEntriesPaginated(page: event.page - 1, pageSize: event.pageSize));
+        } else {
+          emit(ProductEntryPaginatedLoaded(
+            productEntries: paginatedResult.items,
+            currentPage: paginatedResult.page,
+            totalPages: paginatedResult.totalPages,
+            totalItems: paginatedResult.totalCount,
+            pageSize: event.pageSize,
+          ));
+        }
+      },
     );
   }
 
@@ -136,21 +144,54 @@ class ProductEntryBloc extends Bloc<ProductEntryEvent, ProductEntryState> {
     CreateProductEntry event,
     Emitter<ProductEntryState> emit,
   ) async {
+    // Save current state before operation
+    final previousState = state;
+
     final result = await repository.create(event.productEntry);
     await result.fold(
-      (failure) async => emit(ProductEntryError(failure.message)),
+      (failure) async {
+        emit(ProductEntryError(failure.message));
+        // Reload based on previous state to recover from error
+        if (previousState is ProductEntryPaginatedLoaded) {
+          add(LoadProductEntriesPaginated(
+            page: previousState.currentPage,
+            pageSize: previousState.pageSize,
+          ));
+        } else if (previousState is ProductEntryLoaded) {
+          add(LoadProductEntries());
+        }
+      },
       (productEntry) async {
         // Update product quantity: add the entry quantity
         final productResult = await productRepository.getById(productEntry.productId);
         await productResult.fold(
-          (failure) async => emit(ProductEntryError('Failed to update product quantity')),
+          (failure) async {
+            emit(ProductEntryError('Failed to update product quantity'));
+            // Reload based on previous state to recover from error
+            if (previousState is ProductEntryPaginatedLoaded) {
+              add(LoadProductEntriesPaginated(
+                page: previousState.currentPage,
+                pageSize: previousState.pageSize,
+              ));
+            } else if (previousState is ProductEntryLoaded) {
+              add(LoadProductEntries());
+            }
+          },
           (product) async {
             final updatedProduct = product.copyWith(
               quantity: product.quantity + productEntry.quantity,
             );
             await productRepository.update(updatedProduct);
             emit(const ProductEntryOperationSuccess('Product entry created successfully'));
-            // Let the UI handle reload with pagination
+            // Reload based on previous state
+            if (previousState is ProductEntryPaginatedLoaded) {
+              add(LoadProductEntriesPaginated(
+                page: previousState.currentPage,
+                pageSize: previousState.pageSize,
+              ));
+            } else {
+              add(LoadProductEntries());
+            }
           },
         );
       },
@@ -161,14 +202,39 @@ class ProductEntryBloc extends Bloc<ProductEntryEvent, ProductEntryState> {
     UpdateProductEntry event,
     Emitter<ProductEntryState> emit,
   ) async {
+    // Save current state before operation
+    final previousState = state;
+
     final result = await repository.update(event.productEntry);
     await result.fold(
-      (failure) async => emit(ProductEntryError(failure.message)),
+      (failure) async {
+        emit(ProductEntryError(failure.message));
+        // Reload based on previous state to recover from error
+        if (previousState is ProductEntryPaginatedLoaded) {
+          add(LoadProductEntriesPaginated(
+            page: previousState.currentPage,
+            pageSize: previousState.pageSize,
+          ));
+        } else if (previousState is ProductEntryLoaded) {
+          add(LoadProductEntries());
+        }
+      },
       (productEntry) async {
         // Update product quantity: subtract old quantity, add new quantity
         final productResult = await productRepository.getById(productEntry.productId);
         await productResult.fold(
-          (failure) async => emit(ProductEntryError('Failed to update product quantity')),
+          (failure) async {
+            emit(ProductEntryError('Failed to update product quantity'));
+            // Reload based on previous state to recover from error
+            if (previousState is ProductEntryPaginatedLoaded) {
+              add(LoadProductEntriesPaginated(
+                page: previousState.currentPage,
+                pageSize: previousState.pageSize,
+              ));
+            } else if (previousState is ProductEntryLoaded) {
+              add(LoadProductEntries());
+            }
+          },
           (product) async {
             final quantityDifference = event.productEntry.quantity - event.oldProductEntry.quantity;
             final updatedProduct = product.copyWith(
@@ -176,7 +242,15 @@ class ProductEntryBloc extends Bloc<ProductEntryEvent, ProductEntryState> {
             );
             await productRepository.update(updatedProduct);
             emit(const ProductEntryOperationSuccess('Product entry updated successfully'));
-            // Let the UI handle reload with pagination
+            // Reload based on previous state
+            if (previousState is ProductEntryPaginatedLoaded) {
+              add(LoadProductEntriesPaginated(
+                page: previousState.currentPage,
+                pageSize: previousState.pageSize,
+              ));
+            } else {
+              add(LoadProductEntries());
+            }
           },
         );
       },
@@ -187,21 +261,54 @@ class ProductEntryBloc extends Bloc<ProductEntryEvent, ProductEntryState> {
     DeleteProductEntry event,
     Emitter<ProductEntryState> emit,
   ) async {
+    // Save current state before operation
+    final previousState = state;
+
     final result = await repository.delete(event.id);
     await result.fold(
-      (failure) async => emit(ProductEntryError(failure.message)),
+      (failure) async {
+        emit(ProductEntryError(failure.message));
+        // Reload based on previous state to recover from error
+        if (previousState is ProductEntryPaginatedLoaded) {
+          add(LoadProductEntriesPaginated(
+            page: previousState.currentPage,
+            pageSize: previousState.pageSize,
+          ));
+        } else if (previousState is ProductEntryLoaded) {
+          add(LoadProductEntries());
+        }
+      },
       (_) async {
         // Update product quantity: subtract the entry quantity
         final productResult = await productRepository.getById(event.productEntry.productId);
         await productResult.fold(
-          (failure) async => emit(ProductEntryError('Failed to update product quantity')),
+          (failure) async {
+            emit(ProductEntryError('Failed to update product quantity'));
+            // Reload based on previous state to recover from error
+            if (previousState is ProductEntryPaginatedLoaded) {
+              add(LoadProductEntriesPaginated(
+                page: previousState.currentPage,
+                pageSize: previousState.pageSize,
+              ));
+            } else if (previousState is ProductEntryLoaded) {
+              add(LoadProductEntries());
+            }
+          },
           (product) async {
             final updatedProduct = product.copyWith(
               quantity: product.quantity - event.productEntry.quantity,
             );
             await productRepository.update(updatedProduct);
             emit(const ProductEntryOperationSuccess('Product entry deleted successfully'));
-            // Let the UI handle reload with pagination
+            // Reload based on previous state
+            if (previousState is ProductEntryPaginatedLoaded) {
+              add(LoadProductEntriesPaginated(
+                page: previousState.currentPage,
+                pageSize: previousState.pageSize,
+              ));
+            } else {
+              add(LoadProductEntries());
+            }
           },
         );
       },

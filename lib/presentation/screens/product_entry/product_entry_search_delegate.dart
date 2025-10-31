@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import '../../../core/utils/debouncer.dart';
 import '../../../domain/entities/product_entry.dart';
 import '../../blocs/product_entry/product_entry_bloc.dart';
 import '../../blocs/product_entry/product_entry_event.dart';
 import '../../blocs/product_entry/product_entry_state.dart';
-import 'product_entry_form_screen.dart';
 
 class ProductEntrySearchDelegate extends SearchDelegate<ProductEntry?> {
   final int currentPage;
@@ -130,13 +130,7 @@ class ProductEntrySearchDelegate extends SearchDelegate<ProductEntry?> {
                   icon: const Icon(Icons.edit),
                   color: Colors.blue,
                   onPressed: () {
-                    Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (context) => ProductEntryFormScreen(
-                          productEntry: entry,
-                        ),
-                      ),
-                    );
+                    context.push('/stock-entries/${entry.id}/edit');
                   },
                 ),
                 onTap: () => close(context, entry),
@@ -226,13 +220,7 @@ class ProductEntrySearchDelegate extends SearchDelegate<ProductEntry?> {
                   icon: const Icon(Icons.edit),
                   color: Colors.blue,
                   onPressed: () {
-                    Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (context) => ProductEntryFormScreen(
-                          productEntry: entry,
-                        ),
-                      ),
-                    );
+                    context.push('/stock-entries/${entry.id}/edit');
                   },
                 ),
                 onTap: () => close(context, entry),

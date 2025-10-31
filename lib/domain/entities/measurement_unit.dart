@@ -12,6 +12,7 @@ class MeasurementUnit with _$MeasurementUnit {
     required String acronym,
     required DateTime createdAt,
     required DateTime updatedAt,
+    @Default(false) bool synced,
   }) = _MeasurementUnit;
 
   factory MeasurementUnit.fromJson(Map<String, dynamic> json) =>

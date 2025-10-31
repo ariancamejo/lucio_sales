@@ -26,16 +26,18 @@ class ProductPaginatedLoaded extends ProductState {
   final int currentPage;
   final int totalPages;
   final int totalItems;
+  final int pageSize;
 
   const ProductPaginatedLoaded({
     required this.products,
     required this.currentPage,
     required this.totalPages,
     required this.totalItems,
+    required this.pageSize,
   });
 
   @override
-  List<Object> get props => [products, currentPage, totalPages, totalItems];
+  List<Object> get props => [products, currentPage, totalPages, totalItems, pageSize];
 }
 
 class ProductError extends ProductState {
