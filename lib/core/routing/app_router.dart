@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../presentation/screens/auth/login_screen.dart';
+import '../../presentation/screens/auth/auth_callback_screen.dart';
+import '../../presentation/screens/auth/forgot_password_screen.dart';
+import '../../presentation/screens/auth/reset_password_screen.dart';
+import '../../presentation/screens/auth/verify_otp_screen.dart';
 import '../../presentation/screens/home/home_screen.dart';
 import '../../presentation/screens/home/home_content.dart';
 import '../../presentation/screens/measurement_unit/measurement_unit_list_screen.dart';
@@ -67,18 +71,32 @@ class AppRouter {
     /// Redirect logic for authentication
     /// - If user is not authenticated, redirect to /login
     /// - If user is authenticated and on /login, redirect to /home
+    /// - Allow public routes (forgot password, reset password, auth callbacks)
     redirect: (BuildContext context, GoRouterState state) {
       final authService = sl<AuthService>();
       final isAuthenticated = authService.currentUser != null;
-      final isLoginRoute = state.matchedLocation == '/login';
+      final location = state.matchedLocation;
 
-      // Redirect to login if not authenticated and not already on login
-      if (!isAuthenticated && !isLoginRoute) {
+      // Public routes that don't require authentication
+      final publicRoutes = [
+        '/login',
+        '/forgot-password',
+        '/verify-otp',
+        '/reset-password',
+        '/auth/callback',
+        '/login-callback',
+        '/auth/login',
+      ];
+
+      final isPublicRoute = publicRoutes.contains(location);
+
+      // Redirect to login if not authenticated and not on a public route
+      if (!isAuthenticated && !isPublicRoute) {
         return '/login';
       }
 
       // Redirect to home if authenticated and trying to access login
-      if (isAuthenticated && isLoginRoute) {
+      if (isAuthenticated && location == '/login') {
         return '/home';
       }
 
@@ -90,11 +108,69 @@ class AppRouter {
     refreshListenable: _AuthChangeNotifier(),
 
     routes: [
+      // Root route - handles deep link redirects from OAuth
+      GoRoute(
+        path: '/',
+        redirect: (context, state) {
+          final authService = sl<AuthService>();
+          final isAuthenticated = authService.currentUser != null;
+
+          // Redirect to home if authenticated, login otherwise
+          return isAuthenticated ? '/home' : '/login';
+        },
+      ),
+
       // Public routes (no authentication required)
       GoRoute(
         path: '/login',
         name: 'login',
         builder: (context, state) => const LoginScreen(),
+      ),
+
+      // Password recovery routes
+      GoRoute(
+        path: '/forgot-password',
+        name: 'forgot-password',
+        builder: (context, state) => const ForgotPasswordScreen(),
+      ),
+      GoRoute(
+        path: '/verify-otp',
+        name: 'verify-otp',
+        builder: (context, state) {
+          final email = state.extra as String?;
+          if (email == null) {
+            return const Scaffold(
+              body: Center(child: Text('Invalid email')),
+            );
+          }
+          return VerifyOtpScreen(email: email);
+        },
+      ),
+      GoRoute(
+        path: '/reset-password',
+        name: 'reset-password',
+        builder: (context, state) => const ResetPasswordScreen(),
+      ),
+
+      // OAuth callback routes (handles deep links from Google Sign-In)
+      GoRoute(
+        path: '/auth/callback',
+        name: 'auth-callback',
+        builder: (context, state) => const AuthCallbackScreen(),
+      ),
+      GoRoute(
+        path: '/login-callback',
+        name: 'login-callback',
+        builder: (context, state) => const AuthCallbackScreen(),
+      ),
+      GoRoute(
+        path: '/auth/login',
+        redirect: (context, state) {
+          final authService = sl<AuthService>();
+          final isAuthenticated = authService.currentUser != null;
+          // Redirect to home if authenticated after OAuth, login otherwise
+          return isAuthenticated ? '/home' : '/login';
+        },
       ),
 
       // Shell route - wraps all authenticated routes with HomeScreen

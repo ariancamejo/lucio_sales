@@ -77,13 +77,28 @@ class _LoginScreenState extends State<LoginScreen> {
       // The auth state change listener will handle navigation
       // So we don't need to manually navigate here
     } catch (e) {
-      if (mounted) {
+      print('🔴 Google Sign-In Error: $e');
+
+      // Wait a moment to check if auth actually succeeded
+      await Future.delayed(const Duration(milliseconds: 1000));
+
+      final authService = sl<AuthService>();
+      final isAuthenticated = authService.currentUser != null;
+
+      // Only show error if not authenticated and not a known false positive
+      final isFalsePositive = e.toString().contains('popup_closed') ||
+          e.toString().contains('Error while launching') ||
+          e.toString().contains('PlatformException');
+
+      if (mounted && !isAuthenticated && !isFalsePositive) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(ErrorMessages.getAuthErrorMessage(e.toString())),
             backgroundColor: Colors.red,
           ),
         );
+      } else if (isAuthenticated) {
+        print('✅ Google Sign-In succeeded despite error');
       }
     } finally {
       if (mounted) {
@@ -263,7 +278,15 @@ class _LoginScreenState extends State<LoginScreen> {
                       return null;
                     },
                   ),
-                  const SizedBox(height: 24),
+                  const SizedBox(height: 8),
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: TextButton(
+                      onPressed: _isLoading ? null : () => context.go('/forgot-password'),
+                      child: const Text('Forgot Password?'),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
                   ElevatedButton(
                     onPressed: _isLoading ? null : _handleLogin,
                     style: ElevatedButton.styleFrom(

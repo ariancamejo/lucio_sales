@@ -34,8 +34,18 @@ abstract class AuthService {
   /// Check if user is authenticated
   bool get isAuthenticated;
 
-  /// Reset password
+  /// Reset password (legacy method)
   Future<void> resetPassword(String email);
+
+  /// Send OTP to email for password reset
+  Future<void> sendPasswordResetOtp(String email);
+
+  /// Verify OTP and update password
+  Future<void> verifyOtpAndResetPassword({
+    required String email,
+    required String token,
+    required String newPassword,
+  });
 }
 
 /// Supabase implementation of AuthService
@@ -128,30 +138,25 @@ class AuthServiceImpl implements AuthService {
   @override
   Future<bool> signInWithGoogle() async {
     try {
-      // Determine redirect URI based on platform
-      String? redirectTo;
-
       if (kIsWeb) {
-        // Web: use default Supabase redirect
-        redirectTo = null;
-      } else if (Platform.isAndroid) {
-        // Android: use custom scheme
-        redirectTo = 'io.supabase.luciosales://login-callback/';
-      } else if (Platform.isIOS) {
-        // iOS: use custom scheme
-        redirectTo = 'io.supabase.luciosales://login-callback/';
-      } else if (Platform.isMacOS) {
-        // macOS: use custom scheme
-        redirectTo = 'io.supabase.luciosales://login-callback/';
-      } else if (Platform.isWindows || Platform.isLinux) {
-        // Windows/Linux: use web redirect (opens browser)
-        redirectTo = null;
+        // Web: Supabase handles redirect automatically
+        // Just need to ensure the URL is in the Supabase allowed list
+        await _supabaseClient.auth.signInWithOAuth(
+          OAuthProvider.google,
+          redirectTo: null, // Let Supabase use default redirect
+        );
+      } else if (Platform.isAndroid || Platform.isIOS || Platform.isMacOS) {
+        // Mobile/Desktop: use custom scheme
+        await _supabaseClient.auth.signInWithOAuth(
+          OAuthProvider.google,
+          redirectTo: 'io.supabase.luciosales://login-callback/',
+        );
+      } else {
+        // Windows/Linux: default behavior
+        await _supabaseClient.auth.signInWithOAuth(
+          OAuthProvider.google,
+        );
       }
-
-      await _supabaseClient.auth.signInWithOAuth(
-        OAuthProvider.google,
-        redirectTo: redirectTo,
-      );
       return true;
     } catch (e) {
       // Error signing in with Google
@@ -178,6 +183,61 @@ class AuthServiceImpl implements AuthService {
       await _supabaseClient.auth.resetPasswordForEmail(email);
     } catch (e) {
       // Error resetting password
+      rethrow;
+    }
+  }
+
+  @override
+  Future<void> sendPasswordResetOtp(String email) async {
+    try {
+      await _supabaseClient.auth.signInWithOtp(
+        email: email,
+        emailRedirectTo: null, // No redirect needed for OTP
+      );
+    } catch (e) {
+      // Error sending OTP
+      rethrow;
+    }
+  }
+
+  @override
+  Future<void> verifyOtpAndResetPassword({
+    required String email,
+    required String token,
+    required String newPassword,
+  }) async {
+    try {
+      print('🔑 Attempting to verify OTP for email: $email');
+      print('🔑 Token: $token');
+
+      // Verify the OTP token
+      final response = await _supabaseClient.auth.verifyOTP(
+        email: email,
+        token: token,
+        type: OtpType.email,
+      );
+
+      print('🔑 OTP verification response: ${response.session != null ? "Session created" : "No session"}');
+
+      if (response.session == null) {
+        throw Exception('Invalid or expired code');
+      }
+
+      print('🔑 Updating password...');
+      // Update the password
+      await _supabaseClient.auth.updateUser(
+        UserAttributes(password: newPassword),
+      );
+
+      print('🔑 Password updated successfully');
+
+      // Sign out after password reset
+      await _supabaseClient.auth.signOut();
+
+      print('🔑 Signed out after password reset');
+    } catch (e) {
+      // Error verifying OTP or resetting password
+      print('❌ Error in verifyOtpAndResetPassword: $e');
       rethrow;
     }
   }
