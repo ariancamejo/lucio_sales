@@ -140,8 +140,17 @@ class AuthServiceImpl implements AuthService {
     try {
       if (kIsWeb) {
         // Web: Need to specify the redirect URL to come back to the app
-        // This should match the current page URL
-        final redirectUrl = Uri.base.origin;
+        // Use the current page origin (works for localhost and GitHub Pages)
+        final origin = Uri.base.origin;
+        final path = Uri.base.path;
+
+        // Build full redirect URL
+        // For GitHub Pages: https://ariancamejo.github.io/lucio_sales/
+        // For localhost: http://localhost:PORT/
+        final redirectUrl = path.isNotEmpty && path != '/'
+            ? '$origin$path'
+            : origin;
+
         print('🌐 [Auth] Web OAuth redirect URL: $redirectUrl');
 
         await _supabaseClient.auth.signInWithOAuth(
