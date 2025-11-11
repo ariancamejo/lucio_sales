@@ -46,8 +46,8 @@ A Flutter-based sales and inventory management application with Supabase backend
 
 ## 📋 Prerequisites
 
-- Flutter SDK (3.24 or higher)
-- Dart SDK (3.5 or higher)
+- Flutter SDK (3.27 or higher)
+- Dart SDK (3.6 or higher)
 - Supabase account and project
 - Git
 
