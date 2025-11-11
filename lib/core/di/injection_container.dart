@@ -162,10 +162,25 @@ Future<void> init() async {
   }
 
   // Initialize Supabase FIRST - before any services that depend on it
-  await Supabase.initialize(
-    url: Env.supabaseUrl,
-    anonKey: Env.supabaseAnonKey,
-  );
+  if (PlatformInfo.isWeb) {
+    // Web: Need to handle auth callback from OAuth providers
+    await Supabase.initialize(
+      url: Env.supabaseUrl,
+      anonKey: Env.supabaseAnonKey,
+      authOptions: const FlutterAuthClientOptions(
+        authFlowType: AuthFlowType.pkce, // Use PKCE flow for better security
+      ),
+    );
+  } else {
+    // Native platforms
+    await Supabase.initialize(
+      url: Env.supabaseUrl,
+      anonKey: Env.supabaseAnonKey,
+      authOptions: const FlutterAuthClientOptions(
+        authFlowType: AuthFlowType.pkce,
+      ),
+    );
+  }
 
   // Core
   sl.registerLazySingleton<NetworkInfo>(() => NetworkInfoImpl(sl()));
@@ -190,13 +205,23 @@ Future<void> init() async {
 
   sl.registerLazySingleton(() => ThemeService(sl()));
 
-  // Database-dependent services (only on native platforms)
-  if (PlatformInfo.isNative) {
-    sl.registerLazySingleton(() => StatisticsService(
+  // StatisticsService: Different implementation for web vs native
+  if (PlatformInfo.isWeb) {
+    sl.registerLazySingleton<StatisticsService>(() => WebStatisticsService(
           outputDataSource: sl(),
           productDataSource: sl(),
           outputTypeDataSource: sl(),
         ));
+  } else {
+    sl.registerLazySingleton<StatisticsService>(() => NativeStatisticsService(
+          outputDataSource: sl(),
+          productDataSource: sl(),
+          outputTypeDataSource: sl(),
+        ));
+  }
+
+  // Database-dependent services (only on native platforms)
+  if (PlatformInfo.isNative) {
     sl.registerLazySingleton(() => AuditService(
           database: sl(),
           repository: sl(),

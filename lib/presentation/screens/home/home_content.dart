@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
 import '../../../core/di/injection_container.dart';
-import '../../../core/platform/platform_info.dart';
 import '../../../core/services/statistics_service.dart';
 import '../../../domain/models/dashboard_metrics.dart';
 import '../../blocs/sync/sync_bloc.dart';
@@ -21,28 +20,20 @@ class HomeContent extends StatefulWidget {
 }
 
 class _HomeContentState extends State<HomeContent> {
-  StatisticsService? _statisticsService;
+  late final StatisticsService _statisticsService;
   DashboardMetrics? _metrics;
   bool _isLoading = true;
 
   @override
   void initState() {
     super.initState();
-    // StatisticsService only available on native platforms
-    if (PlatformInfo.isNative) {
-      try {
-        _statisticsService = sl<StatisticsService>();
-        // Load metrics after a short delay to ensure sync has started
-        Future.delayed(const Duration(milliseconds: 500), _loadMetrics);
-      } catch (e) {
-        // Service not available, set empty metrics
-        setState(() {
-          _metrics = DashboardMetrics.empty();
-          _isLoading = false;
-        });
-      }
-    } else {
-      // On web, show empty metrics (statistics not available)
+    // StatisticsService now available on all platforms
+    try {
+      _statisticsService = sl<StatisticsService>();
+      // Load metrics after a short delay to ensure sync has started
+      Future.delayed(const Duration(milliseconds: 500), _loadMetrics);
+    } catch (e) {
+      // Service not available, set empty metrics
       setState(() {
         _metrics = DashboardMetrics.empty();
         _isLoading = false;
@@ -51,16 +42,9 @@ class _HomeContentState extends State<HomeContent> {
   }
 
   Future<void> _loadMetrics() async {
-    if (_statisticsService == null) {
-      setState(() {
-        _metrics = DashboardMetrics.empty();
-        _isLoading = false;
-      });
-      return;
-    }
-
     try {
-      final metrics = await _statisticsService!.getDashboardMetrics();
+      setState(() => _isLoading = true);
+      final metrics = await _statisticsService.getDashboardMetrics();
       if (mounted) {
         setState(() {
           _metrics = metrics;
@@ -88,88 +72,44 @@ class _HomeContentState extends State<HomeContent> {
           _loadMetrics();
         }
       },
-      child: _statisticsService == null
-          ? Center(
-              child: Padding(
-                padding: const EdgeInsets.all(24),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(
-                      Icons.dashboard_outlined,
-                      size: 64,
-                      color: Colors.grey[400],
-                    ),
-                    const SizedBox(height: 16),
-                    Text(
-                      'Dashboard Not Available',
-                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                            fontWeight: FontWeight.bold,
-                          ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'Dashboard statistics are only available on native platforms (desktop/mobile).',
-                      textAlign: TextAlign.center,
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            color: Colors.grey[600],
-                          ),
-                    ),
-                    const SizedBox(height: 24),
-                    Text(
-                      'You can still use Quick Actions below:',
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.bold,
-                          ),
-                    ),
-                    const SizedBox(height: 16),
-                    // Show Quick Actions even on web
-                    ConstrainedBox(
-                      constraints: const BoxConstraints(maxWidth: 600),
-                      child: _buildQuickActions(context),
-                    ),
-                  ],
+      child: RefreshIndicator(
+        onRefresh: _loadMetrics,
+        child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: const EdgeInsets.all(12),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+            if (_isLoading)
+              const Center(
+                child: Padding(
+                  padding: EdgeInsets.all(40.0),
+                  child: CircularProgressIndicator(),
                 ),
-              ),
-            )
-          : RefreshIndicator(
-              onRefresh: _loadMetrics,
-              child: SingleChildScrollView(
-                physics: const AlwaysScrollableScrollPhysics(),
-                padding: const EdgeInsets.all(12),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                  if (_isLoading)
-                    const Center(
-                      child: Padding(
-                        padding: EdgeInsets.all(40.0),
-                        child: CircularProgressIndicator(),
-                      ),
-                    )
-                  else ...[
-                    // Today's Metrics
-                    _buildTodayMetrics(context, currencyFormat),
-                    const SizedBox(height: 12),
+              )
+            else ...[
+              // Today's Metrics
+              _buildTodayMetrics(context, currencyFormat),
+              const SizedBox(height: 12),
 
-                    // Main Metrics Grid
-                    _buildMetricsGrid(context, currencyFormat),
-                    const SizedBox(height: 16),
+              // Main Metrics Grid
+              _buildMetricsGrid(context, currencyFormat),
+              const SizedBox(height: 16),
 
-                    // Quick Actions
-                    Text(
-                      'Quick Actions',
-                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                            fontWeight: FontWeight.bold,
-                          ),
+              // Quick Actions
+              Text(
+                'Quick Actions',
+                style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.bold,
                     ),
-                    const SizedBox(height: 8),
-                    _buildQuickActions(context),
-                  ],
-                ],
-                ),
               ),
-            ),
+              const SizedBox(height: 8),
+              _buildQuickActions(context),
+            ],
+          ],
+          ),
+        ),
+      ),
     );
   }
 

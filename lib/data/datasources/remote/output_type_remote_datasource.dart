@@ -14,11 +14,21 @@ class OutputTypeRemoteDataSourceImpl implements OutputTypeRemoteDataSource {
 
   OutputTypeRemoteDataSourceImpl({required this.client});
 
+  /// Get the current authenticated user's ID
+  String? get _currentUserId => client.auth.currentUser?.id;
+
   @override
   Future<List<OutputType>> getAll() async {
+    // SECURITY: Filter by current user
+    final userId = _currentUserId;
+    if (userId == null) {
+      throw Exception('User not authenticated');
+    }
+
     final response = await client
         .from('output_types')
         .select()
+        .eq('user_id', userId) // Filter by user
         .order('name', ascending: true);
 
     return (response as List).map((json) {
@@ -30,10 +40,17 @@ class OutputTypeRemoteDataSourceImpl implements OutputTypeRemoteDataSource {
 
   @override
   Future<OutputType> getById(String id) async {
+    // SECURITY: Filter by current user
+    final userId = _currentUserId;
+    if (userId == null) {
+      throw Exception('User not authenticated');
+    }
+
     final response = await client
         .from('output_types')
         .select()
         .eq('id', id)
+        .eq('user_id', userId) // Filter by user
         .single();
 
     final type = Map<String, dynamic>.from(response);

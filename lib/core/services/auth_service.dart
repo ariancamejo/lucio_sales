@@ -139,11 +139,14 @@ class AuthServiceImpl implements AuthService {
   Future<bool> signInWithGoogle() async {
     try {
       if (kIsWeb) {
-        // Web: Supabase handles redirect automatically
-        // Just need to ensure the URL is in the Supabase allowed list
+        // Web: Need to specify the redirect URL to come back to the app
+        // This should match the current page URL
+        final redirectUrl = Uri.base.origin;
+        print('🌐 [Auth] Web OAuth redirect URL: $redirectUrl');
+
         await _supabaseClient.auth.signInWithOAuth(
           OAuthProvider.google,
-          redirectTo: null, // Let Supabase use default redirect
+          redirectTo: redirectUrl,
         );
       } else if (Platform.isAndroid || Platform.isIOS || Platform.isMacOS) {
         // Mobile/Desktop: use custom scheme
@@ -159,7 +162,7 @@ class AuthServiceImpl implements AuthService {
       }
       return true;
     } catch (e) {
-      // Error signing in with Google
+      print('❌ [Auth] Error signing in with Google: $e');
       rethrow;
     }
   }

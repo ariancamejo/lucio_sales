@@ -15,11 +15,21 @@ class ProductRemoteDataSourceImpl implements ProductRemoteDataSource {
 
   ProductRemoteDataSourceImpl({required this.client});
 
+  /// Get the current authenticated user's ID
+  String? get _currentUserId => client.auth.currentUser?.id;
+
   @override
   Future<List<Product>> getAll({bool includeInactive = false}) async {
+    // SECURITY: Filter by current user
+    final userId = _currentUserId;
+    if (userId == null) {
+      throw Exception('User not authenticated');
+    }
+
     var query = client
         .from('products')
-        .select('*, measurement_unit:measurement_units!inner(*)');
+        .select('*, measurement_unit:measurement_units!inner(*)')
+        .eq('user_id', userId); // Filter by user
 
     if (!includeInactive) {
       query = query.eq('active', true);
@@ -36,10 +46,17 @@ class ProductRemoteDataSourceImpl implements ProductRemoteDataSource {
 
   @override
   Future<Product> getById(String id) async {
+    // SECURITY: Filter by current user
+    final userId = _currentUserId;
+    if (userId == null) {
+      throw Exception('User not authenticated');
+    }
+
     final response = await client
         .from('products')
         .select('*, measurement_unit:measurement_units!inner(*)')
         .eq('id', id)
+        .eq('user_id', userId) // Filter by user
         .single();
 
     final product = Map<String, dynamic>.from(response);
@@ -49,10 +66,17 @@ class ProductRemoteDataSourceImpl implements ProductRemoteDataSource {
 
   @override
   Future<Product> getByCode(String code) async {
+    // SECURITY: Filter by current user
+    final userId = _currentUserId;
+    if (userId == null) {
+      throw Exception('User not authenticated');
+    }
+
     final response = await client
         .from('products')
         .select('*, measurement_unit:measurement_units!inner(*)')
         .eq('code', code)
+        .eq('user_id', userId) // Filter by user
         .single();
 
     final product = Map<String, dynamic>.from(response);

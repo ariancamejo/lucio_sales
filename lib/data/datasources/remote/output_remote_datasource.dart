@@ -20,8 +20,17 @@ class OutputRemoteDataSourceImpl implements OutputRemoteDataSource {
 
   OutputRemoteDataSourceImpl({required this.client});
 
+  /// Get the current authenticated user's ID
+  String? get _currentUserId => client.auth.currentUser?.id;
+
   @override
   Future<List<Output>> getAll() async {
+    // SECURITY: Filter by current user via product relation
+    final userId = _currentUserId;
+    if (userId == null) {
+      throw Exception('User not authenticated');
+    }
+
     final response = await client
         .from('outputs')
         .select('''
@@ -30,6 +39,7 @@ class OutputRemoteDataSourceImpl implements OutputRemoteDataSource {
           measurement_unit:measurement_units!inner(*),
           output_type:output_types!inner(*)
         ''')
+        .eq('product.user_id', userId) // Filter by user through product
         .order('date', ascending: false);
 
     return (response as List).map((json) => _parseOutput(json)).toList();
@@ -37,6 +47,12 @@ class OutputRemoteDataSourceImpl implements OutputRemoteDataSource {
 
   @override
   Future<Output> getById(String id) async {
+    // SECURITY: Filter by current user via product relation
+    final userId = _currentUserId;
+    if (userId == null) {
+      throw Exception('User not authenticated');
+    }
+
     final response = await client
         .from('outputs')
         .select('''
@@ -46,6 +62,7 @@ class OutputRemoteDataSourceImpl implements OutputRemoteDataSource {
           output_type:output_types!inner(*)
         ''')
         .eq('id', id)
+        .eq('product.user_id', userId) // Filter by user through product
         .single();
 
     return _parseOutput(response);
@@ -53,6 +70,12 @@ class OutputRemoteDataSourceImpl implements OutputRemoteDataSource {
 
   @override
   Future<List<Output>> getByDateRange(DateTime start, DateTime end) async {
+    // SECURITY: Filter by current user via product relation
+    final userId = _currentUserId;
+    if (userId == null) {
+      throw Exception('User not authenticated');
+    }
+
     final response = await client
         .from('outputs')
         .select('''
@@ -61,6 +84,7 @@ class OutputRemoteDataSourceImpl implements OutputRemoteDataSource {
           measurement_unit:measurement_units!inner(*),
           output_type:output_types!inner(*)
         ''')
+        .eq('product.user_id', userId) // Filter by user through product
         .gte('date', start.toIso8601String())
         .lte('date', end.toIso8601String())
         .order('date', ascending: false);
@@ -70,6 +94,12 @@ class OutputRemoteDataSourceImpl implements OutputRemoteDataSource {
 
   @override
   Future<List<Output>> getByType(String outputTypeId) async {
+    // SECURITY: Filter by current user via product relation
+    final userId = _currentUserId;
+    if (userId == null) {
+      throw Exception('User not authenticated');
+    }
+
     final response = await client
         .from('outputs')
         .select('''
@@ -79,6 +109,7 @@ class OutputRemoteDataSourceImpl implements OutputRemoteDataSource {
           output_type:output_types!inner(*)
         ''')
         .eq('output_type_id', outputTypeId)
+        .eq('product.user_id', userId) // Filter by user through product
         .order('date', ascending: false);
 
     return (response as List).map((json) => _parseOutput(json)).toList();
