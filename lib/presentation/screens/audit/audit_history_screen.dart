@@ -4,6 +4,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
 import '../../../core/database/app_database.dart';
 import '../../../core/di/injection_container.dart';
+import '../../../core/platform/platform_info.dart';
 import '../../../core/services/audit_service.dart';
 import '../../blocs/audit/audit_bloc.dart';
 import '../../blocs/audit/audit_event.dart';
@@ -17,7 +18,8 @@ class AuditHistoryScreen extends StatefulWidget {
 }
 
 class _AuditHistoryScreenState extends State<AuditHistoryScreen> {
-  late final AuditBloc _bloc;
+  AuditBloc? _bloc;
+  AuditService? _auditService;
   int _currentPage = 1;
   static const int _pageSize = 20;
 
@@ -46,20 +48,66 @@ class _AuditHistoryScreenState extends State<AuditHistoryScreen> {
   @override
   void initState() {
     super.initState();
-    _bloc = AuditBloc(auditService: sl<AuditService>());
-    _loadPage(_currentPage);
+    // AuditService only available on native platforms
+    if (PlatformInfo.isNative) {
+      try {
+        _auditService = sl<AuditService>();
+        _bloc = AuditBloc(auditService: _auditService!);
+        _loadPage(_currentPage);
+      } catch (e) {
+        // Service not available
+        debugPrint('AuditService not available: $e');
+      }
+    }
+    // On web, audit history not available
   }
 
   @override
   void dispose() {
-    _bloc.close();
+    _bloc?.close();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
+    // Show message when service is not available
+    if (_auditService == null || _bloc == null) {
+      return Scaffold(
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.history,
+                  size: 64,
+                  color: Colors.grey[400],
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'Audit History Not Available',
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Audit history is only available on native platforms (desktop/mobile).',
+                  textAlign: TextAlign.center,
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: Colors.grey[600],
+                      ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
     return BlocProvider.value(
-      value: _bloc,
+      value: _bloc!,
       child: Scaffold(
         body: BlocBuilder<AuditBloc, AuditState>(
           builder: (context, state) {
@@ -209,7 +257,8 @@ class _AuditHistoryScreenState extends State<AuditHistoryScreen> {
   }
 
   void _loadPage(int page) {
-    _bloc.add(
+    if (_bloc == null) return;
+    _bloc!.add(
       LoadAuditHistoryPaginated(
         page: page,
         pageSize: _pageSize,

@@ -5,7 +5,9 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../constants/env.dart';
 import '../database/app_database.dart';
+import '../database/seed_data.dart';
 import '../network/network_info.dart';
+import '../platform/platform_info.dart';
 import '../services/auth_service.dart';
 import '../theme/theme_service.dart';
 import '../services/statistics_service.dart';
@@ -74,7 +76,7 @@ Future<void> init() async {
   sl.registerLazySingleton<MeasurementUnitRepository>(
     () => MeasurementUnitRepositoryImpl(
       remoteDataSource: sl(),
-      localDataSource: sl(),
+      localDataSource: PlatformInfo.isWeb ? null : sl(),
       networkInfo: sl(),
       authService: sl(),
     ),
@@ -82,29 +84,29 @@ Future<void> init() async {
   sl.registerLazySingleton<OutputTypeRepository>(
     () => OutputTypeRepositoryImpl(
       remoteDataSource: sl(),
-      localDataSource: sl(),
+      localDataSource: PlatformInfo.isWeb ? null : sl(),
       networkInfo: sl(),
     ),
   );
   sl.registerLazySingleton<ProductRepository>(
     () => ProductRepositoryImpl(
       remoteDataSource: sl(),
-      localDataSource: sl(),
+      localDataSource: PlatformInfo.isWeb ? null : sl(),
       networkInfo: sl(),
     ),
   );
   sl.registerLazySingleton<OutputRepository>(
     () => OutputRepositoryImpl(
       remoteDataSource: sl(),
-      localDataSource: sl(),
+      localDataSource: PlatformInfo.isWeb ? null : sl(),
       networkInfo: sl(),
     ),
   );
   sl.registerLazySingleton<ProductEntryRepository>(
     () => ProductEntryRepositoryImpl(
       remoteDataSource: sl(),
-      localDataSource: sl(),
-      productLocalDataSource: sl(),
+      localDataSource: PlatformInfo.isWeb ? null : sl(),
+      productLocalDataSource: PlatformInfo.isWeb ? null : sl(),
       networkInfo: sl(),
       authService: sl(),
     ),
@@ -112,7 +114,7 @@ Future<void> init() async {
   sl.registerLazySingleton<UserHistoryRepository>(
     () => UserHistoryRepositoryImpl(
       remoteDataSource: sl(),
-      localDataSource: sl(),
+      localDataSource: PlatformInfo.isWeb ? null : sl(),
       networkInfo: sl(),
     ),
   );
@@ -137,25 +139,27 @@ Future<void> init() async {
     () => UserHistoryRemoteDataSourceImpl(client: sl()),
   );
 
-  // Data sources - Local
-  sl.registerLazySingleton<MeasurementUnitLocalDataSource>(
-    () => MeasurementUnitLocalDataSourceImpl(database: sl()),
-  );
-  sl.registerLazySingleton<OutputTypeLocalDataSource>(
-    () => OutputTypeLocalDataSourceImpl(database: sl()),
-  );
-  sl.registerLazySingleton<ProductLocalDataSource>(
-    () => ProductLocalDataSourceImpl(database: sl()),
-  );
-  sl.registerLazySingleton<OutputLocalDataSource>(
-    () => OutputLocalDataSourceImpl(database: sl()),
-  );
-  sl.registerLazySingleton<ProductEntryLocalDataSource>(
-    () => ProductEntryLocalDataSourceImpl(sl()),
-  );
-  sl.registerLazySingleton<UserHistoryLocalDataSource>(
-    () => UserHistoryLocalDataSourceImpl(database: sl()),
-  );
+  // Data sources - Local (only on native platforms)
+  if (PlatformInfo.isNative) {
+    sl.registerLazySingleton<MeasurementUnitLocalDataSource>(
+      () => MeasurementUnitLocalDataSourceImpl(database: sl()),
+    );
+    sl.registerLazySingleton<OutputTypeLocalDataSource>(
+      () => OutputTypeLocalDataSourceImpl(database: sl()),
+    );
+    sl.registerLazySingleton<ProductLocalDataSource>(
+      () => ProductLocalDataSourceImpl(database: sl()),
+    );
+    sl.registerLazySingleton<OutputLocalDataSource>(
+      () => OutputLocalDataSourceImpl(database: sl()),
+    );
+    sl.registerLazySingleton<ProductEntryLocalDataSource>(
+      () => ProductEntryLocalDataSourceImpl(sl()),
+    );
+    sl.registerLazySingleton<UserHistoryLocalDataSource>(
+      () => UserHistoryLocalDataSourceImpl(database: sl()),
+    );
+  }
 
   // Initialize Supabase FIRST - before any services that depend on it
   await Supabase.initialize(
@@ -167,7 +171,11 @@ Future<void> init() async {
   sl.registerLazySingleton<NetworkInfo>(() => NetworkInfoImpl(sl()));
   sl.registerLazySingleton(() => Connectivity());
   sl.registerLazySingleton(() => Supabase.instance.client);
-  sl.registerLazySingleton(() => AppDatabase());
+
+  // Database - Only register on native platforms (not web)
+  if (PlatformInfo.isNative) {
+    sl.registerLazySingleton(() => AppDatabase());
+  }
 
   // Services
   try {
@@ -181,13 +189,18 @@ Future<void> init() async {
   }
 
   sl.registerLazySingleton(() => ThemeService(sl()));
-  sl.registerLazySingleton(() => StatisticsService(
-        outputDataSource: sl(),
-        productDataSource: sl(),
-        outputTypeDataSource: sl(),
-      ));
-  sl.registerLazySingleton(() => AuditService(
-        database: sl(),
-        repository: sl(),
-      ));
+
+  // Database-dependent services (only on native platforms)
+  if (PlatformInfo.isNative) {
+    sl.registerLazySingleton(() => StatisticsService(
+          outputDataSource: sl(),
+          productDataSource: sl(),
+          outputTypeDataSource: sl(),
+        ));
+    sl.registerLazySingleton(() => AuditService(
+          database: sl(),
+          repository: sl(),
+        ));
+    sl.registerLazySingleton(() => DatabaseSeeder(database: sl()));
+  }
 }

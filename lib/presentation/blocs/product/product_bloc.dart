@@ -133,7 +133,9 @@ class ProductBloc extends Bloc<ProductEvent, ProductState> {
     final result = await repository.getByCode(event.code);
     result.fold(
       (failure) => emit(ProductError(failure.message)),
-      (product) => emit(ProductLoaded([product])),
+      (product) => product != null
+          ? emit(ProductLoaded([product]))
+          : emit(const ProductError('Product not found')),
     );
   }
 

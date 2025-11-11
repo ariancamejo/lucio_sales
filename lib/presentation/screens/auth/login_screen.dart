@@ -3,6 +3,8 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/di/injection_container.dart';
 import '../../../core/services/auth_service.dart';
+import '../../../core/platform/platform_info.dart';
+import '../../../core/database/seed_data.dart';
 import '../../../core/utils/error_messages.dart';
 import '../../../resources/app_images.dart';
 import 'signup_screen.dart';
@@ -41,6 +43,17 @@ class _LoginScreenState extends State<LoginScreen> {
       );
 
       if (user != null && mounted) {
+        // Seed default data for new users (only on native platforms)
+        if (PlatformInfo.isNative) {
+          try {
+            final seeder = sl<DatabaseSeeder>();
+            await seeder.seedAll(user.id);
+          } catch (e) {
+            // Ignore seed errors - data may already exist
+            print('Seed error (safe to ignore): $e');
+          }
+        }
+
         // go_router will automatically redirect to /home based on auth state
         context.go('/home');
       } else if (mounted) {
@@ -74,6 +87,18 @@ class _LoginScreenState extends State<LoginScreen> {
       final authService = sl<AuthService>();
       await authService.signInWithGoogle();
 
+      // Seed default data for new users (only on native platforms)
+      final user = authService.currentUser;
+      if (user != null && PlatformInfo.isNative) {
+        try {
+          final seeder = sl<DatabaseSeeder>();
+          await seeder.seedAll(user.id);
+        } catch (e) {
+          // Ignore seed errors - data may already exist
+          print('Seed error (safe to ignore): $e');
+        }
+      }
+
       // The auth state change listener will handle navigation
       // So we don't need to manually navigate here
     } catch (e) {
@@ -84,6 +109,20 @@ class _LoginScreenState extends State<LoginScreen> {
 
       final authService = sl<AuthService>();
       final isAuthenticated = authService.currentUser != null;
+
+      // Seed default data if authenticated (only on native platforms)
+      if (isAuthenticated && PlatformInfo.isNative) {
+        final user = authService.currentUser;
+        if (user != null) {
+          try {
+            final seeder = sl<DatabaseSeeder>();
+            await seeder.seedAll(user.id);
+          } catch (e) {
+            // Ignore seed errors
+            print('Seed error (safe to ignore): $e');
+          }
+        }
+      }
 
       // Only show error if not authenticated and not a known false positive
       final isFalsePositive = e.toString().contains('popup_closed') ||

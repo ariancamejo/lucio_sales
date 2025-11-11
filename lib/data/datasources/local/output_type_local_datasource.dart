@@ -38,6 +38,8 @@ class OutputTypeLocalDataSourceImpl implements OutputTypeLocalDataSource {
               id: item.id,
               userId: item.userId,
               name: item.name,
+              isDefault: item.isDefault,
+              isSale: item.isSale,
               createdAt: item.createdAt,
               updatedAt: item.updatedAt,
               synced: item.synced,
@@ -65,6 +67,8 @@ class OutputTypeLocalDataSourceImpl implements OutputTypeLocalDataSource {
               id: item.id,
               userId: item.userId,
               name: item.name,
+              isDefault: item.isDefault,
+              isSale: item.isSale,
               createdAt: item.createdAt,
               updatedAt: item.updatedAt,
               synced: item.synced,
@@ -100,6 +104,8 @@ class OutputTypeLocalDataSourceImpl implements OutputTypeLocalDataSource {
       id: item.id,
       userId: item.userId,
       name: item.name,
+      isDefault: item.isDefault,
+      isSale: item.isSale,
       createdAt: item.createdAt,
       updatedAt: item.updatedAt,
       synced: item.synced,
@@ -113,6 +119,8 @@ class OutputTypeLocalDataSourceImpl implements OutputTypeLocalDataSource {
             id: outputType.id,
             userId: outputType.userId,
             name: outputType.name,
+            isDefault: Value(outputType.isDefault),
+            isSale: Value(outputType.isSale),
           ),
         );
 
@@ -123,6 +131,8 @@ class OutputTypeLocalDataSourceImpl implements OutputTypeLocalDataSource {
       entityId: outputType.id,
       newValues: {
         'name': outputType.name,
+        'isDefault': outputType.isDefault,
+        'isSale': outputType.isSale,
       },
     );
   }
@@ -138,6 +148,8 @@ class OutputTypeLocalDataSourceImpl implements OutputTypeLocalDataSource {
       OutputTypesCompanion(
         userId: Value(outputType.userId),
         name: Value(outputType.name),
+        isDefault: Value(outputType.isDefault),
+        isSale: Value(outputType.isSale),
         updatedAt: Value(outputType.updatedAt),
         synced: Value(outputType.synced),
       ),
@@ -151,9 +163,13 @@ class OutputTypeLocalDataSourceImpl implements OutputTypeLocalDataSource {
         entityId: outputType.id,
         oldValues: {
           'name': oldType.name,
+          'isDefault': oldType.isDefault,
+          'isSale': oldType.isSale,
         },
         newValues: {
           'name': outputType.name,
+          'isDefault': outputType.isDefault,
+          'isSale': outputType.isSale,
         },
       );
     }
@@ -166,6 +182,8 @@ class OutputTypeLocalDataSourceImpl implements OutputTypeLocalDataSource {
         id: outputType.id,
         userId: outputType.userId,
         name: outputType.name,
+        isDefault: Value(outputType.isDefault),
+        isSale: Value(outputType.isSale),
         createdAt: Value(outputType.createdAt),
         updatedAt: Value(outputType.updatedAt),
         synced: Value(outputType.synced),
@@ -182,6 +200,8 @@ class OutputTypeLocalDataSourceImpl implements OutputTypeLocalDataSource {
             id: type.id,
             userId: type.userId,
             name: type.name,
+            isDefault: Value(type.isDefault),
+            isSale: Value(type.isSale),
             createdAt: Value(type.createdAt),
             updatedAt: Value(type.updatedAt),
             synced: Value(type.synced),
@@ -229,6 +249,8 @@ class OutputTypeLocalDataSourceImpl implements OutputTypeLocalDataSource {
               id: item.id,
               userId: item.userId,
               name: item.name,
+              isDefault: item.isDefault,
+              isSale: item.isSale,
               createdAt: item.createdAt,
               updatedAt: item.updatedAt,
               synced: item.synced,

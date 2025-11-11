@@ -25,6 +25,8 @@ class _OutputTypeFormScreenState extends State<OutputTypeFormScreen> {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
   OutputType? _loadedType;
+  bool _isDefault = false;
+  bool _isSale = true;
 
   bool get isEditing => widget.outputTypeId != null;
 
@@ -38,6 +40,8 @@ class _OutputTypeFormScreenState extends State<OutputTypeFormScreen> {
 
   void _loadTypeData(OutputType type) {
     _nameController.text = type.name;
+    _isDefault = type.isDefault;
+    _isSale = type.isSale;
     _loadedType = type;
   }
 
@@ -88,6 +92,30 @@ class _OutputTypeFormScreenState extends State<OutputTypeFormScreen> {
                 },
               ),
               const SizedBox(height: 24),
+              Card(
+                child: Column(
+                  children: [
+                    SwitchListTile(
+                      title: const Text('Is Sale'),
+                      subtitle: const Text('Include this type in sales reports'),
+                      value: _isSale,
+                      onChanged: (value) {
+                        setState(() => _isSale = value);
+                      },
+                    ),
+                    const Divider(height: 1),
+                    SwitchListTile(
+                      title: const Text('Default Type'),
+                      subtitle: const Text('Use this type by default for new outputs'),
+                      value: _isDefault,
+                      onChanged: (value) {
+                        setState(() => _isDefault = value);
+                      },
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 24),
               ElevatedButton(
                 onPressed: _handleSubmit,
                 style: ElevatedButton.styleFrom(
@@ -119,6 +147,8 @@ class _OutputTypeFormScreenState extends State<OutputTypeFormScreen> {
         id: isEditing ? _loadedType!.id : const Uuid().v4(),
         userId: isEditing ? _loadedType!.userId : currentUser!.id,
         name: _nameController.text.trim(),
+        isDefault: _isDefault,
+        isSale: _isSale,
         createdAt: isEditing ? _loadedType!.createdAt : now,
         updatedAt: now,
       );

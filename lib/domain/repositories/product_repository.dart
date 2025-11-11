@@ -11,7 +11,7 @@ abstract class ProductRepository {
     bool includeInactive = false,
   });
   Future<Either<Failure, Product>> getById(String id);
-  Future<Either<Failure, Product>> getByCode(String code);
+  Future<Either<Failure, Product?>> getByCode(String code);
   Future<Either<Failure, Product>> create(Product product);
   Future<Either<Failure, Product>> update(Product product);
   Future<Either<Failure, void>> delete(String id);

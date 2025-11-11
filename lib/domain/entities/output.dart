@@ -8,6 +8,8 @@ part 'output.g.dart';
 
 @freezed
 class Output with _$Output {
+  const Output._();
+
   const factory Output({
     required String id,
     required String userId,
@@ -27,4 +29,15 @@ class Output with _$Output {
 
   factory Output.fromJson(Map<String, dynamic> json) =>
       _$OutputFromJson(json);
+
+  /// Compares business data fields (excluding id, timestamps, and synced status)
+  /// Returns true if this output has different data than the other output
+  bool hasDataChanges(Output other) {
+    return productId != other.productId ||
+        quantity != other.quantity ||
+        measurementUnitId != other.measurementUnitId ||
+        totalAmount != other.totalAmount ||
+        outputTypeId != other.outputTypeId ||
+        date != other.date;
+  }
 }

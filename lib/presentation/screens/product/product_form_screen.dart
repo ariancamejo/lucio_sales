@@ -41,6 +41,8 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
   bool _active = false;
   Product? _loadedProduct;
   bool _isLoadingData = false;
+  String? _codeError;
+  Product? _duplicateProduct;
 
   bool get isEditing => widget.product != null || widget.productId != null;
 
@@ -77,6 +79,50 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
     _selectedMeasurementUnitId = product.measurementUnitId;
     _active = product.active;
     _loadedProduct = product;
+  }
+
+  Future<void> _validateCode(String code) async {
+    if (code.trim().isEmpty) {
+      setState(() {
+        _codeError = null;
+        _duplicateProduct = null;
+      });
+      return;
+    }
+
+    // Check if code exists
+    final result = await sl<ProductBloc>().repository.getByCode(code.trim());
+
+    result.fold(
+      (failure) {
+        // Error checking - assume code is available
+        setState(() {
+          _codeError = null;
+          _duplicateProduct = null;
+        });
+      },
+      (product) {
+        // If editing and it's the same product, code is valid
+        if (isEditing && _loadedProduct != null && product?.id == _loadedProduct!.id) {
+          setState(() {
+            _codeError = null;
+            _duplicateProduct = null;
+          });
+        } else if (product != null) {
+          // Code is already used by another product
+          setState(() {
+            _codeError = 'Code already exists for: ${product.name}';
+            _duplicateProduct = product;
+          });
+        } else {
+          // Code is available
+          setState(() {
+            _codeError = null;
+            _duplicateProduct = null;
+          });
+        }
+      },
+    );
   }
 
   @override
@@ -140,18 +186,54 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
             const SizedBox(height: 16),
             TextFormField(
               controller: _codeController,
-              decoration: const InputDecoration(
-                labelText: 'Code',
-                border: OutlineInputBorder(),
+              decoration: InputDecoration(
+                labelText: 'Code *',
+                border: const OutlineInputBorder(),
                 hintText: 'e.g., P001',
+                errorText: _codeError,
+                suffixIcon: _codeError != null
+                    ? const Icon(Icons.error, color: Colors.red)
+                    : _codeController.text.isNotEmpty && _codeError == null
+                        ? const Icon(Icons.check_circle, color: Colors.green)
+                        : null,
               ),
+              onChanged: (value) {
+                _validateCode(value);
+              },
               validator: (value) {
                 if (value == null || value.trim().isEmpty) {
                   return 'Please enter a code';
                 }
+                if (_codeError != null) {
+                  return _codeError;
+                }
                 return null;
               },
             ),
+            if (_duplicateProduct != null)
+              Padding(
+                padding: const EdgeInsets.only(top: 8.0),
+                child: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: Colors.orange.withValues(alpha: 0.1),
+                    border: Border.all(color: Colors.orange),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.warning_amber, color: Colors.orange, size: 20),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'Product: ${_duplicateProduct!.name}\nPrice: \$${_duplicateProduct!.price}',
+                          style: const TextStyle(fontSize: 12),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
             const SizedBox(height: 16),
             TextFormField(
               controller: _quantityController,

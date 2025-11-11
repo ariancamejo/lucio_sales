@@ -110,6 +110,24 @@ class _OutputFormScreenState extends State<OutputFormScreen> {
             }
           },
         ),
+        BlocListener<OutputTypeBloc, OutputTypeState>(
+          listener: (context, state) {
+            // Auto-select the first default OutputType when creating a new output
+            if (state is OutputTypeLoaded && !isEditing && _selectedOutputTypeId == null) {
+              try {
+                final defaultType = state.outputTypes.firstWhere(
+                  (type) => type.isDefault,
+                );
+                setState(() {
+                  _selectedOutputTypeId = defaultType.id;
+                });
+              } catch (e) {
+                // No default type found, do nothing
+                debugPrint('No default OutputType found: $e');
+              }
+            }
+          },
+        ),
       ],
       child: _isLoadingData
           ? const Scaffold(

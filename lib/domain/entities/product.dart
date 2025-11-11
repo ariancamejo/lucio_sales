@@ -6,6 +6,8 @@ part 'product.g.dart';
 
 @freezed
 class Product with _$Product {
+  const Product._();
+
   const factory Product({
     required String id,
     required String userId,
@@ -24,4 +26,16 @@ class Product with _$Product {
 
   factory Product.fromJson(Map<String, dynamic> json) =>
       _$ProductFromJson(json);
+
+  /// Compares business data fields (excluding id, timestamps, and synced status)
+  /// Returns true if this product has different data than the other product
+  bool hasDataChanges(Product other) {
+    return name != other.name ||
+        code != other.code ||
+        quantity != other.quantity ||
+        cost != other.cost ||
+        price != other.price ||
+        measurementUnitId != other.measurementUnitId ||
+        active != other.active;
+  }
 }

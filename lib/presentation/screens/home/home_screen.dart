@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:go_router/go_router.dart';
 import 'package:sidebarx/sidebarx.dart';
 import '../../../core/di/injection_container.dart';
 import '../../../core/services/auth_service.dart';

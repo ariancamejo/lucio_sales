@@ -22,6 +22,8 @@ class OutputTypes extends Table {
   TextColumn get id => text()();
   TextColumn get userId => text()();
   TextColumn get name => text()();
+  BoolColumn get isDefault => boolean().withDefault(const Constant(false))();
+  BoolColumn get isSale => boolean().withDefault(const Constant(true))();
   DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
   DateTimeColumn get updatedAt => dateTime().withDefault(currentDateAndTime)();
   BoolColumn get synced => boolean().withDefault(const Constant(false))();
@@ -131,6 +133,20 @@ class AppDatabase extends _$AppDatabase {
         if (from < 4) {
           // Create user_history table for audit trail
           await m.createTable(userHistory);
+        }
+        if (from < 5) {
+          // Add isDefault and isSale to output_types
+          await m.addColumn(outputTypes, outputTypes.isDefault);
+          await m.addColumn(outputTypes, outputTypes.isSale);
+
+          // Create indexes using raw SQL
+          await customStatement('CREATE INDEX IF NOT EXISTS idx_product_code ON products(code);');
+          await customStatement('CREATE INDEX IF NOT EXISTS idx_product_user ON products(user_id);');
+          await customStatement('CREATE INDEX IF NOT EXISTS idx_product_synced ON products(synced);');
+          await customStatement('CREATE INDEX IF NOT EXISTS idx_output_user ON outputs(user_id);');
+          await customStatement('CREATE INDEX IF NOT EXISTS idx_output_product ON outputs(product_id);');
+          await customStatement('CREATE INDEX IF NOT EXISTS idx_output_date ON outputs(date);');
+          await customStatement('CREATE INDEX IF NOT EXISTS idx_entry_product ON product_entries(product_id);');
         }
       },
     );

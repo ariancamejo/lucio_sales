@@ -6,6 +6,7 @@ import 'dart:io';
 import 'package:excel/excel.dart';
 import 'package:file_picker/file_picker.dart';
 import '../../../core/di/injection_container.dart';
+import '../../../core/platform/platform_info.dart';
 import '../../../core/services/statistics_service.dart';
 import '../../../core/utils/file_download.dart';
 import '../../../domain/models/sales_statistics.dart';
@@ -19,7 +20,7 @@ class SalesReportsScreen extends StatefulWidget {
 }
 
 class _SalesReportsScreenState extends State<SalesReportsScreen> {
-  final _statisticsService = sl<StatisticsService>();
+  StatisticsService? _statisticsService;
   DateTime _startDate = DateTime.now().subtract(const Duration(days: 30));
   DateTime _endDate = DateTime.now();
   SalesStatistics? _statistics;
@@ -28,13 +29,34 @@ class _SalesReportsScreenState extends State<SalesReportsScreen> {
   @override
   void initState() {
     super.initState();
-    _loadStatistics();
+    // StatisticsService only available on native platforms
+    if (PlatformInfo.isNative) {
+      try {
+        _statisticsService = sl<StatisticsService>();
+        _loadStatistics();
+      } catch (e) {
+        // Service not available, set loading to false
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    } else {
+      // On web, statistics not available
+      setState(() {
+        _isLoading = false;
+      });
+    }
   }
 
   Future<void> _loadStatistics() async {
+    if (_statisticsService == null) {
+      setState(() => _isLoading = false);
+      return;
+    }
+
     setState(() => _isLoading = true);
     try {
-      final stats = await _statisticsService.getSalesStatistics(
+      final stats = await _statisticsService!.getSalesStatistics(
         startDate: _startDate,
         endDate: _endDate,
       );
@@ -179,7 +201,38 @@ class _SalesReportsScreenState extends State<SalesReportsScreen> {
           ),
         ],
       ),
-      body: _isLoading
+      body: _statisticsService == null
+          ? Center(
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      Icons.assessment_outlined,
+                      size: 64,
+                      color: Colors.grey[400],
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      'Statistics Not Available',
+                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                            fontWeight: FontWeight.bold,
+                          ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Sales reports are only available on native platforms (desktop/mobile).',
+                      textAlign: TextAlign.center,
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                            color: Colors.grey[600],
+                          ),
+                    ),
+                  ],
+                ),
+              ),
+            )
+          : _isLoading
           ? const Center(child: CircularProgressIndicator())
           : _statistics == null
               ? const Center(child: Text('No data available'))

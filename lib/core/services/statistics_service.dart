@@ -20,9 +20,18 @@ class StatisticsService {
     required DateTime startDate,
     required DateTime endDate,
   }) async {
-    final outputs = await outputDataSource.getByDateRange(startDate, endDate);
+    final allOutputs = await outputDataSource.getByDateRange(startDate, endDate);
     final products = await productDataSource.getAll(includeInactive: true);
     final outputTypes = await outputTypeDataSource.getAll();
+
+    // Filter only sales (outputs where type.isSale = true)
+    final outputs = allOutputs.where((output) {
+      final outputType = outputTypes.firstWhere(
+        (t) => t.id == output.outputTypeId,
+        orElse: () => outputTypes.first,
+      );
+      return outputType.isSale;
+    }).toList();
 
     // Calculate total revenue and sales count
     double totalRevenue = 0;
