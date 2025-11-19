@@ -90,6 +90,9 @@ dev_dependencies:
   envied_generator: ^1.1.1
   spider: ^4.2.2
 
+dependency_overrides:
+  vector_math: ^2.2.0
+
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
 
