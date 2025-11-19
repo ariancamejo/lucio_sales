@@ -91,6 +91,10 @@ class ProductRemoteDataSourceImpl implements ProductRemoteDataSource {
     data.remove('updated_at');
     data.remove('measurement_unit');
     data.remove('synced'); // synced is a local-only field
+    // Convert imageUrl to image_url for Supabase
+    if (data.containsKey('imageUrl')) {
+      data['image_url'] = data.remove('imageUrl');
+    }
 
     final response = await client
         .from('products')
@@ -110,6 +114,10 @@ class ProductRemoteDataSourceImpl implements ProductRemoteDataSource {
     data.remove('updated_at');
     data.remove('measurement_unit');
     data.remove('synced'); // synced is a local-only field
+    // Convert imageUrl to image_url for Supabase
+    if (data.containsKey('imageUrl')) {
+      data['image_url'] = data.remove('imageUrl');
+    }
 
     final response = await client
         .from('products')

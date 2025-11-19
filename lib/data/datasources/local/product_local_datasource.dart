@@ -52,6 +52,7 @@ class ProductLocalDataSourceImpl implements ProductLocalDataSource {
               measurementUnitId: item.measurementUnitId,
               price: item.price,
               active: item.active,
+              imageUrl: item.imageUrl,
               createdAt: item.createdAt,
               updatedAt: item.updatedAt,
               synced: item.synced,
@@ -90,6 +91,7 @@ class ProductLocalDataSourceImpl implements ProductLocalDataSource {
               measurementUnitId: item.measurementUnitId,
               price: item.price,
               active: item.active,
+              imageUrl: item.imageUrl,
               createdAt: item.createdAt,
               updatedAt: item.updatedAt,
               synced: item.synced,
@@ -135,6 +137,7 @@ class ProductLocalDataSourceImpl implements ProductLocalDataSource {
       measurementUnitId: item.measurementUnitId,
       price: item.price,
       active: item.active,
+      imageUrl: item.imageUrl,
       createdAt: item.createdAt,
       updatedAt: item.updatedAt,
       synced: item.synced,
@@ -159,6 +162,7 @@ class ProductLocalDataSourceImpl implements ProductLocalDataSource {
       measurementUnitId: item.measurementUnitId,
       price: item.price,
       active: item.active,
+      imageUrl: item.imageUrl,
       createdAt: item.createdAt,
       updatedAt: item.updatedAt,
       synced: item.synced,
@@ -178,6 +182,7 @@ class ProductLocalDataSourceImpl implements ProductLocalDataSource {
             measurementUnitId: product.measurementUnitId,
             price: product.price,
             active: Value(product.active),
+            imageUrl: Value(product.imageUrl),
           ),
         );
 
@@ -194,6 +199,7 @@ class ProductLocalDataSourceImpl implements ProductLocalDataSource {
         'price': product.price,
         'measurementUnitId': product.measurementUnitId,
         'active': product.active,
+        'imageUrl': product.imageUrl,
       },
     );
   }
@@ -215,6 +221,7 @@ class ProductLocalDataSourceImpl implements ProductLocalDataSource {
         measurementUnitId: Value(product.measurementUnitId),
         price: Value(product.price),
         active: Value(product.active),
+        imageUrl: Value(product.imageUrl),
         updatedAt: Value(product.updatedAt),
         synced: Value(product.synced),
       ),
@@ -234,6 +241,7 @@ class ProductLocalDataSourceImpl implements ProductLocalDataSource {
           'price': oldProduct.price,
           'measurementUnitId': oldProduct.measurementUnitId,
           'active': oldProduct.active,
+          'imageUrl': oldProduct.imageUrl,
         },
         newValues: {
           'name': product.name,
@@ -243,6 +251,7 @@ class ProductLocalDataSourceImpl implements ProductLocalDataSource {
           'price': product.price,
           'measurementUnitId': product.measurementUnitId,
           'active': product.active,
+          'imageUrl': product.imageUrl,
         },
       );
     }
@@ -261,6 +270,7 @@ class ProductLocalDataSourceImpl implements ProductLocalDataSource {
         measurementUnitId: product.measurementUnitId,
         price: product.price,
         active: Value(product.active),
+        imageUrl: Value(product.imageUrl),
         createdAt: Value(product.createdAt),
         updatedAt: Value(product.updatedAt),
         synced: Value(product.synced),
@@ -283,6 +293,7 @@ class ProductLocalDataSourceImpl implements ProductLocalDataSource {
             measurementUnitId: product.measurementUnitId,
             price: product.price,
             active: Value(product.active),
+            imageUrl: Value(product.imageUrl),
             createdAt: Value(product.createdAt),
             updatedAt: Value(product.updatedAt),
             synced: Value(product.synced),
@@ -315,6 +326,7 @@ class ProductLocalDataSourceImpl implements ProductLocalDataSource {
           'price': product.price,
           'measurementUnitId': product.measurementUnitId,
           'active': product.active,
+          'imageUrl': product.imageUrl,
         },
       );
     }
@@ -342,6 +354,7 @@ class ProductLocalDataSourceImpl implements ProductLocalDataSource {
               measurementUnitId: item.measurementUnitId,
               price: item.price,
               active: item.active,
+              imageUrl: item.imageUrl,
               createdAt: item.createdAt,
               updatedAt: item.updatedAt,
               synced: item.synced,

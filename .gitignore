@@ -114,3 +114,4 @@ test/.test_coverage.dart
 # Exceptions to above rules (files we DO want to commit)
 !**/ios/Runner/GoogleService-Info.plist.example
 !**/android/app/google-services.json.example
+.claude/

@@ -9,6 +9,7 @@ import '../database/seed_data.dart';
 import '../network/network_info.dart';
 import '../platform/platform_info.dart';
 import '../services/auth_service.dart';
+import '../services/storage_service.dart';
 import '../theme/theme_service.dart';
 import '../services/statistics_service.dart';
 import '../services/audit_service.dart';
@@ -204,6 +205,7 @@ Future<void> init() async {
   }
 
   sl.registerLazySingleton(() => ThemeService(sl()));
+  sl.registerLazySingleton<StorageService>(() => StorageServiceImpl(client: sl()));
 
   // StatisticsService: Different implementation for web vs native
   if (PlatformInfo.isWeb) {

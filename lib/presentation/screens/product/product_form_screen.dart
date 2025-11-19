@@ -1,9 +1,14 @@
+import 'package:cached_network_image/cached_network_image.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:uuid/uuid.dart';
 import '../../../core/di/injection_container.dart';
+import '../../../core/network/network_info.dart';
 import '../../../core/services/auth_service.dart';
+import '../../../core/services/storage_service.dart';
 import '../../../domain/entities/product.dart';
 import '../../blocs/product/product_bloc.dart';
 import '../../blocs/product/product_event.dart';
@@ -11,6 +16,13 @@ import '../../blocs/product/product_state.dart';
 import '../../blocs/measurement_unit/measurement_unit_bloc.dart';
 import '../../blocs/measurement_unit/measurement_unit_event.dart';
 import '../../blocs/measurement_unit/measurement_unit_state.dart';
+
+class SelectedImage {
+  final Uint8List bytes;
+  final String name;
+
+  const SelectedImage({required this.bytes, required this.name});
+}
 
 class ProductFormScreen extends StatefulWidget {
   /// Product ID for editing (from route parameter)
@@ -43,6 +55,9 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
   bool _isLoadingData = false;
   String? _codeError;
   Product? _duplicateProduct;
+  String? _imageUrl;
+  SelectedImage? _selectedImage;
+  bool _isUploadingImage = false;
 
   bool get isEditing => widget.product != null || widget.productId != null;
 
@@ -78,7 +93,32 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
     _priceController.text = product.price.toString();
     _selectedMeasurementUnitId = product.measurementUnitId;
     _active = product.active;
+    _imageUrl = product.imageUrl;
     _loadedProduct = product;
+  }
+
+  Future<void> _pickImage() async {
+    final picker = ImagePicker();
+    final pickedFile = await picker.pickImage(
+      source: ImageSource.gallery,
+      maxWidth: 800,
+      maxHeight: 800,
+      imageQuality: 85,
+    );
+
+    if (pickedFile != null) {
+      final bytes = await pickedFile.readAsBytes();
+      setState(() {
+        _selectedImage = SelectedImage(bytes: bytes, name: pickedFile.name);
+      });
+    }
+  }
+
+  void _removeImage() {
+    setState(() {
+      _selectedImage = null;
+      _imageUrl = null;
+    });
   }
 
   Future<void> _validateCode(String code) async {
@@ -170,6 +210,154 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
         child: ListView(
           padding: const EdgeInsets.all(16),
           children: [
+            // Image picker
+            FutureBuilder<bool>(
+              future: sl<NetworkInfo>().isConnected,
+              builder: (context, snapshot) {
+                final isConnected = snapshot.data ?? false;
+                final isLoading = snapshot.connectionState == ConnectionState.waiting;
+
+                return Center(
+                  child: Column(
+                    children: [
+                      GestureDetector(
+                        onTap: (_isUploadingImage || !isConnected) ? null : _pickImage,
+                        child: Container(
+                          width: 150,
+                          height: 150,
+                          decoration: BoxDecoration(
+                            color: Colors.grey[200],
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: !isConnected && !isLoading
+                                  ? Colors.orange
+                                  : Colors.grey[400]!,
+                            ),
+                          ),
+                          child: _isUploadingImage
+                              ? const Center(child: CircularProgressIndicator())
+                              : _selectedImage != null
+                                  ? ClipRRect(
+                                      borderRadius: BorderRadius.circular(12),
+                                      child: Image.memory(
+                                        _selectedImage!.bytes,
+                                        fit: BoxFit.cover,
+                                        width: 150,
+                                        height: 150,
+                                      ),
+                                    )
+                                  : _imageUrl != null
+                                      ? ClipRRect(
+                                          borderRadius: BorderRadius.circular(12),
+                                          child: isLoading
+                                              ? const Center(child: CircularProgressIndicator())
+                                              : kIsWeb || defaultTargetPlatform == TargetPlatform.iOS || defaultTargetPlatform == TargetPlatform.android
+                                                  ? CachedNetworkImage(
+                                                      imageUrl: _imageUrl!,
+                                                      fit: BoxFit.cover,
+                                                      width: 150,
+                                                      height: 150,
+                                                      placeholder: (context, url) => const Center(
+                                                        child: CircularProgressIndicator(),
+                                                      ),
+                                                      errorWidget: (context, url, error) {
+                                                        if (!isConnected) {
+                                                          return Column(
+                                                            mainAxisAlignment: MainAxisAlignment.center,
+                                                            children: [
+                                                              Icon(
+                                                                Icons.cloud_off,
+                                                                size: 40,
+                                                                color: Colors.orange[700],
+                                                              ),
+                                                              const SizedBox(height: 4),
+                                                              Text(
+                                                                'Sin conexion',
+                                                                style: TextStyle(
+                                                                  color: Colors.orange[700],
+                                                                  fontSize: 11,
+                                                                ),
+                                                                textAlign: TextAlign.center,
+                                                              ),
+                                                            ],
+                                                          );
+                                                        }
+                                                        return const Icon(
+                                                          Icons.broken_image,
+                                                          size: 50,
+                                                          color: Colors.grey,
+                                                        );
+                                                      },
+                                                    )
+                                                  : Image.network(
+                                                      _imageUrl!,
+                                                      fit: BoxFit.cover,
+                                                      width: 150,
+                                                      height: 150,
+                                                      loadingBuilder: (context, child, loadingProgress) {
+                                                        if (loadingProgress == null) return child;
+                                                        return const Center(child: CircularProgressIndicator());
+                                                      },
+                                                      errorBuilder: (_, __, ___) => const Icon(
+                                                        Icons.broken_image,
+                                                        size: 50,
+                                                        color: Colors.grey,
+                                                      ),
+                                                    ),
+                                        )
+                                      : !isConnected && !isLoading
+                                          ? Column(
+                                              mainAxisAlignment: MainAxisAlignment.center,
+                                              children: [
+                                                Icon(
+                                                  Icons.cloud_off,
+                                                  size: 40,
+                                                  color: Colors.orange[700],
+                                                ),
+                                                const SizedBox(height: 8),
+                                                Text(
+                                                  'Sin conexion',
+                                                  style: TextStyle(color: Colors.orange[700]),
+                                                ),
+                                                const SizedBox(height: 4),
+                                                Text(
+                                                  'No se puede subir',
+                                                  style: TextStyle(
+                                                    color: Colors.grey[600],
+                                                    fontSize: 11,
+                                                  ),
+                                                ),
+                                              ],
+                                            )
+                                          : Column(
+                                              mainAxisAlignment: MainAxisAlignment.center,
+                                              children: [
+                                                Icon(
+                                                  Icons.add_photo_alternate,
+                                                  size: 40,
+                                                  color: Colors.grey[600],
+                                                ),
+                                                const SizedBox(height: 8),
+                                                Text(
+                                                  'Add Image',
+                                                  style: TextStyle(color: Colors.grey[600]),
+                                                ),
+                                              ],
+                                            ),
+                        ),
+                      ),
+                      if (_selectedImage != null || _imageUrl != null)
+                        TextButton.icon(
+                          onPressed: _removeImage,
+                          icon: const Icon(Icons.delete, color: Colors.red),
+                          label: const Text('Remove', style: TextStyle(color: Colors.red)),
+                        ),
+                    ],
+                  ),
+                );
+              },
+            ),
+            const SizedBox(height: 16),
             TextFormField(
               controller: _nameController,
               decoration: const InputDecoration(
@@ -356,7 +544,7 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
     );
   }
 
-  void _handleSubmit() {
+  Future<void> _handleSubmit() async {
     if (_formKey.currentState!.validate()) {
       final authService = sl<AuthService>();
       final currentUser = authService.currentUser;
@@ -370,11 +558,35 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
 
       // Get the existing product (either from widget or loaded)
       final existingProduct = widget.product ?? _loadedProduct;
+      final userId = isEditing ? existingProduct!.userId : currentUser!.id;
+
+      // Upload image if selected
+      String? finalImageUrl = _imageUrl;
+      if (_selectedImage != null) {
+        setState(() => _isUploadingImage = true);
+        try {
+          final storageService = sl<StorageService>();
+          finalImageUrl = await storageService.uploadProductImage(
+            userId,
+            _selectedImage!.bytes,
+            _selectedImage!.name,
+          );
+        } catch (e) {
+          setState(() => _isUploadingImage = false);
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('Error uploading image: $e')),
+            );
+          }
+          return;
+        }
+        setState(() => _isUploadingImage = false);
+      }
 
       final now = DateTime.now();
       final product = Product(
         id: isEditing ? existingProduct!.id : const Uuid().v4(),
-        userId: isEditing ? existingProduct!.userId : currentUser!.id,
+        userId: userId,
         name: _nameController.text.trim(),
         code: _codeController.text.trim(),
         quantity: double.parse(_quantityController.text),
@@ -382,6 +594,7 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
         cost: double.parse(_costController.text),
         price: double.parse(_priceController.text),
         active: _active,
+        imageUrl: finalImageUrl,
         createdAt: isEditing ? existingProduct!.createdAt : now,
         updatedAt: now,
       );

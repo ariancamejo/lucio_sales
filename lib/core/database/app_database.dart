@@ -42,6 +42,7 @@ class Products extends Table {
   TextColumn get measurementUnitId => text()();
   RealColumn get price => real()();
   BoolColumn get active => boolean().withDefault(const Constant(true))();
+  TextColumn get imageUrl => text().nullable()();
   DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
   DateTimeColumn get updatedAt => dateTime().withDefault(currentDateAndTime)();
   BoolColumn get synced => boolean().withDefault(const Constant(false))();
@@ -147,6 +148,10 @@ class AppDatabase extends _$AppDatabase {
           await customStatement('CREATE INDEX IF NOT EXISTS idx_output_product ON outputs(product_id);');
           await customStatement('CREATE INDEX IF NOT EXISTS idx_output_date ON outputs(date);');
           await customStatement('CREATE INDEX IF NOT EXISTS idx_entry_product ON product_entries(product_id);');
+        }
+        if (from < 6) {
+          // Add imageUrl column to products
+          await m.addColumn(products, products.imageUrl);
         }
       },
     );

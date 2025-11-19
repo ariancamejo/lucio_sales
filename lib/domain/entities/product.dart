@@ -21,6 +21,7 @@ class Product with _$Product {
     required DateTime createdAt,
     required DateTime updatedAt,
     @Default(false) bool synced,
+    String? imageUrl,
     MeasurementUnit? measurementUnit,
   }) = _Product;
 
@@ -36,6 +37,7 @@ class Product with _$Product {
         cost != other.cost ||
         price != other.price ||
         measurementUnitId != other.measurementUnitId ||
-        active != other.active;
+        active != other.active ||
+        imageUrl != other.imageUrl;
   }
 }
