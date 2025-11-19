@@ -35,17 +35,17 @@ dependencies:
   cupertino_icons: ^1.0.8
   sidebarx: ^0.17.2
   responsive_framework: ^1.5.1
-  fl_chart: ^0.69.2
+  fl_chart: ^1.1.0
   excel: ^4.0.6
   flutter_svg: ^2.0.14
 
   # State Management
-  flutter_bloc: ^8.1.6
+  flutter_bloc: ^9.1.1
   equatable: ^2.0.7
 
   # Supabase & Auth
   supabase_flutter: ^2.9.1
-  google_sign_in: ^6.2.2
+  google_sign_in: ^7.2.0
 
   # Local Database
   drift: ^2.26.1
@@ -53,24 +53,24 @@ dependencies:
   path: ^1.9.0
 
   # Models & Serialization
-  freezed_annotation: ^2.4.4
+  freezed_annotation: ^3.1.0
   json_annotation: ^4.9.0
 
   # Dependency Injection
-  get_it: ^8.0.2
+  get_it: ^9.0.5
 
   # Navigation
-  go_router: ^14.6.2
+  go_router: ^17.0.0
 
   # Utils
-  connectivity_plus: ^6.1.1
-  intl: ^0.19.0
+  connectivity_plus: ^7.0.0
+  intl: ^0.20.2
   uuid: ^4.5.1
   dartz: ^0.10.1
-  envied: ^0.5.4+1
+  envied: ^1.3.1
   shared_preferences: ^2.3.3
   sqlite3_flutter_libs: ^0.5.40
-  sqlite3_web: ^0.3.2
+  sqlite3_web: ^0.4.1
   file_picker: ^10.3.3
   package_info_plus: ^9.0.0
   image_picker: ^1.2.1
@@ -80,14 +80,14 @@ dev_dependencies:
   flutter_test:
     sdk: flutter
 
-  flutter_lints: ^5.0.0
+  flutter_lints: ^6.0.0
 
   # Code Generation
   build_runner: ^2.4.13
-  freezed: ^2.5.7
+  freezed: ^3.0.6
   json_serializable: ^6.8.0
   drift_dev: ^2.26.0
-  envied_generator: ^0.5.4+1
+  envied_generator: ^1.1.1
   spider: ^4.2.2
 
 # For information on the generic Dart part of this file, see the

@@ -4,7 +4,7 @@ part 'user_history.freezed.dart';
 part 'user_history.g.dart';
 
 @freezed
-class UserHistory with _$UserHistory {
+abstract class UserHistory with _$UserHistory {
   const factory UserHistory({
     required String id,
     required String userId,

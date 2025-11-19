@@ -4,9 +4,7 @@ part 'output_type.freezed.dart';
 part 'output_type.g.dart';
 
 @freezed
-class OutputType with _$OutputType {
-  const OutputType._();
-
+abstract class OutputType with _$OutputType {
   const factory OutputType({
     required String id,
     required String userId,
@@ -20,9 +18,10 @@ class OutputType with _$OutputType {
 
   factory OutputType.fromJson(Map<String, dynamic> json) =>
       _$OutputTypeFromJson(json);
+}
 
+extension OutputTypeX on OutputType {
   /// Compares business data fields (excluding id, timestamps, and synced status)
-  /// Returns true if this output type has different data than the other output type
   bool hasDataChanges(OutputType other) {
     return name != other.name ||
         isDefault != other.isDefault ||

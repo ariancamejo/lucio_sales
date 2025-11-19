@@ -4,9 +4,7 @@ part 'measurement_unit.freezed.dart';
 part 'measurement_unit.g.dart';
 
 @freezed
-class MeasurementUnit with _$MeasurementUnit {
-  const MeasurementUnit._();
-
+abstract class MeasurementUnit with _$MeasurementUnit {
   const factory MeasurementUnit({
     required String id,
     required String userId,
@@ -19,11 +17,11 @@ class MeasurementUnit with _$MeasurementUnit {
 
   factory MeasurementUnit.fromJson(Map<String, dynamic> json) =>
       _$MeasurementUnitFromJson(json);
+}
 
+extension MeasurementUnitX on MeasurementUnit {
   /// Compares business data fields (excluding id, timestamps, and synced status)
-  /// Returns true if this measurement unit has different data than the other measurement unit
   bool hasDataChanges(MeasurementUnit other) {
-    return name != other.name ||
-        acronym != other.acronym;
+    return name != other.name || acronym != other.acronym;
   }
 }

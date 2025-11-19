@@ -5,9 +5,7 @@ part 'product.freezed.dart';
 part 'product.g.dart';
 
 @freezed
-class Product with _$Product {
-  const Product._();
-
+abstract class Product with _$Product {
   const factory Product({
     required String id,
     required String userId,
@@ -27,9 +25,10 @@ class Product with _$Product {
 
   factory Product.fromJson(Map<String, dynamic> json) =>
       _$ProductFromJson(json);
+}
 
+extension ProductX on Product {
   /// Compares business data fields (excluding id, timestamps, and synced status)
-  /// Returns true if this product has different data than the other product
   bool hasDataChanges(Product other) {
     return name != other.name ||
         code != other.code ||
