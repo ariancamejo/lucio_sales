@@ -23,7 +23,6 @@ jobs:
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.29.0'
           channel: 'stable'
           cache: true
 
@@ -57,7 +56,7 @@ jobs:
         run: |
           echo "## 🚀 Deployment Successful!" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "✅ **Flutter Version:** 3.29.0" >> $GITHUB_STEP_SUMMARY
+          echo "✅ **Flutter Version:** stable" >> $GITHUB_STEP_SUMMARY
           echo "✅ **Build Mode:** Release" >> $GITHUB_STEP_SUMMARY
           echo "✅ **Target:** Web" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
